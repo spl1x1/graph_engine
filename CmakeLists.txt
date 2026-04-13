@@ -1,0 +1,50 @@
+cmake_minimum_required(VERSION 3.10)
+
+Project(GraphEngine)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_LINK_WARNING_AS_ERROR ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+#Library and executable definitions
+add_library(EngineLib STATIC
+    src/Engine.cpp
+    include/Engine.hpp
+)
+
+add_executable(EngineExecutable
+  src/main.cpp
+)
+
+# CPM - CMake Package Manager
+set(CPM_DIR "${CMAKE_SOURCE_DIR}/cmake")
+set(CPM_PATH "${CPM_DIR}/CPM.cmake")
+
+if (NOT EXISTS ${CPM_PATH})
+  message(STATUS "CPM.cmake not found at ${CPM_PATH}, downloading...")
+  execute_process(COMMAND mkdir -p "${CPM_DIR}"
+            COMMAND wget -O "${CPM_PATH}"
+            "https://github.com/cpm-cmake/
+            CPM.cmake/releases/latest/download/get_cpm.cmake"
+    )
+endif()
+message(STATUS "Using CPM.cmake from ${CPM_PATH}")
+include(${CPM_PATH})
+
+
+# CPM package definitions
+set(BUILD_SHARED_LIBS OFF)
+CPMAddPackage(
+        NAME raylib
+        GITHUB_REPOSITORY raysan5/raylib
+        GIT_TAG  5.5
+)
+
+#Package linkage
+target_link_libraries(EngineLib
+    PRIVATE raylib
+)
+
+target_link_libraries(EngineExecutable
+    PRIVATE EngineLib
+)
