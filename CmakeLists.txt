@@ -6,10 +6,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_LINK_WARNING_AS_ERROR ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+
+file(GLOB_RECURSE LIB_HEADER_FILES
+    lib_include/*.hpp
+)
+file (GLOB_RECURSE LIB_SOURCE_FILES
+    lib_src/*.cpp
+)
+
 #Library and executable definitions
 add_library(EngineLib STATIC
-    src/Engine.cpp
-    include/Engine.hpp
+  ${LIB_HEADER_FILES}
+  ${LIB_SOURCE_FILES}
 )
 
 add_executable(EngineExecutable
@@ -43,6 +51,10 @@ CPMAddPackage(
 #Package linkage
 target_link_libraries(EngineLib
     PRIVATE raylib
+)
+
+include_directories(
+    EngineLib PUBLIC lib_include
 )
 
 target_link_libraries(EngineExecutable

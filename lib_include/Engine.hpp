@@ -1,18 +1,17 @@
 #ifndef ENGINE_HPP
 #define ENGINE_HPP
 
-#include <functional>
+#include "EngineTypes.hpp"
+
 #include <memory>
-#include <vector>
-#include <functional>
 
 
 class Engine{
 static std::unique_ptr<Engine> instance;
 
-std::vector<std::function<void()>> hooks;
+Enviroment env;
 
-Engine();
+Engine(Enviroment env);
 
 // Delete copy and move constructors and assignment operators
 Engine(const Engine&) = delete;
@@ -21,8 +20,9 @@ Engine(Engine&&) = delete;
 Engine& operator=(Engine&&) = delete;
 
 public:
-    static void Init();
+    static void Init(Enviroment env);
     static void Loop();
+
 };
 
 #endif // ENGINE_HPP

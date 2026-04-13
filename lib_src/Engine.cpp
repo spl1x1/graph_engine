@@ -1,22 +1,23 @@
-#include "../include/Engine.hpp"
+#include "Engine.hpp"
 #include <raylib.h>
 #include <iostream>
 #include <cassert>
 
 std::unique_ptr<Engine> Engine::instance = nullptr;
 
-Engine::Engine() {
+Engine::Engine(Enviroment env) {
     // Initialize raylib
-    InitWindow(800, 600, "Graph Engine");
-    SetTargetFPS(60);
+    InitWindow(env.Window.Width, env.Window.Height, env.Title.c_str());
+    SetTargetFPS(env.Window.FrameRate);
+    this->env = env;
 }
 
-void Engine::Init(){
+void Engine::Init(Enviroment env){
     if (instance != nullptr) {
         std::cerr << "Engine already initialized!" << std::endl;
         return;
     }
-    instance = std::unique_ptr<Engine>(new Engine());
+    instance = std::unique_ptr<Engine>(new Engine(env));
     std::cout << "Engine initialized" << std::endl;
 }
 
@@ -33,4 +34,5 @@ void Engine::Loop() {
 
         EndDrawing();
     }
+    std::cout << "Engine loop ended" << std::endl;
 }
