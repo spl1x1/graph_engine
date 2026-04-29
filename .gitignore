@@ -1,5 +1,8 @@
 build/
 cmake/
+
 .zed/
 .vscode/
 .cache/
+
+compile_commands.json
