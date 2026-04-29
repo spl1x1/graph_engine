@@ -7,17 +7,25 @@ set(CMAKE_LINK_WARNING_AS_ERROR ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 
-file(GLOB_RECURSE LIB_HEADER_FILES
-    lib_include/*.hpp
+file (GLOB_RECURSE LIB_HEADERS
+  Engine/include/*.hpp
 )
+
 file (GLOB_RECURSE LIB_SOURCE_FILES
-    lib_src/*.cpp
+    Engine/src/*.cpp
 )
+
+add_custom_target(copy_assets ALL
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "../assets"
+        "${CMAKE_BINARY_DIR}/assets"
+        COMMENT "Copying assets directory")
+
 
 #Library and executable definitions
 add_library(EngineLib STATIC
-  ${LIB_HEADER_FILES}
   ${LIB_SOURCE_FILES}
+  ${LIB_HEADERS}
 )
 
 add_executable(EngineExecutable
@@ -50,13 +58,18 @@ CPMAddPackage(
 
 #Package linkage
 target_link_libraries(EngineLib
-    PRIVATE raylib
+    PUBLIC raylib
 )
 
 include_directories(
-    EngineLib PUBLIC lib_include
+  EngineLib
+  PUBLIC
+  "${CMAKE_CURRENT_SOURCE_DIR}/Engine/include"
 )
+
 
 target_link_libraries(EngineExecutable
     PRIVATE EngineLib
 )
+
+add_dependencies(EngineExecutable copy_assets)
