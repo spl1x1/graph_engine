@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 Project(GraphEngine)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_LINK_WARNING_AS_ERROR ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -13,6 +13,15 @@ file (GLOB_RECURSE LIB_HEADERS
 
 file (GLOB_RECURSE LIB_SOURCE_FILES
     Engine/src/*.cpp
+)
+
+
+file (GLOB_RECURSE EXECUTABLE_HEADERS
+  include/*.hpp
+)
+
+file (GLOB_RECURSE EXECUTABLE_FILES
+    src/*.cpp
 )
 
 add_custom_target(copy_assets ALL
@@ -29,21 +38,12 @@ add_library(EngineLib STATIC
 )
 
 add_executable(EngineExecutable
-  src/main.cpp
+  ${EXECUTABLE_FILES}
+  ${EXECUTABLEHEADERS}
 )
 
 # CPM - CMake Package Manager
-set(CPM_DIR "${CMAKE_SOURCE_DIR}/cmake")
-set(CPM_PATH "${CPM_DIR}/CPM.cmake")
-
-if (NOT EXISTS ${CPM_PATH})
-  message(STATUS "CPM.cmake not found at ${CPM_PATH}, downloading...")
-  execute_process(COMMAND mkdir -p "${CPM_DIR}"
-            COMMAND wget -O "${CPM_PATH}"
-            "https://github.com/cpm-cmake/
-            CPM.cmake/releases/latest/download/get_cpm.cmake"
-    )
-endif()
+set(CPM_PATH "cmake/CPM.cmake")
 message(STATUS "Using CPM.cmake from ${CPM_PATH}")
 include(${CPM_PATH})
 
@@ -65,6 +65,12 @@ include_directories(
   EngineLib
   PUBLIC
   "${CMAKE_CURRENT_SOURCE_DIR}/Engine/include"
+)
+
+include_directories(
+  EngineExecutable
+  PUBLIC
+  "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 
 

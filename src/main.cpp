@@ -1,5 +1,7 @@
 #include <Engine.hpp>
 #include <EngineTypes.hpp>
+#include <functional>
+#include "OSPF.hpp"
 
 int main() {
     constexpr int windowWidth = 800;
@@ -14,7 +16,7 @@ int main() {
     Enviroment env = {
         .Background = {"assets/nebula_background.png"},
         .Window = {windowWidth, windowHeight, 60},
-        .Sandbox = {sandboxWidth, sandboxHeight, 20},
+        .Sandbox = {sandboxWidth, sandboxHeight},
         .Title = "Graph Engine",
     };
 
@@ -24,6 +26,9 @@ int main() {
     };
 
     Engine::Init(&env, &sandboxData);
+    Engine::RegisterNodeType("Router", [](Vec2 position) {
+        return std::make_unique<RouterNode>(position);
+    });
     Engine::Loop();
     return 0;
 }

@@ -1,9 +1,12 @@
 #include <cassert>
 #include <cmath>
 #include <iostream>
+#include <ranges>
+#include <string>
 #include "Engine.hpp"
 #include "EngineTypes.hpp"
 #include "raylib.h"
+#include "Button.hpp"
 
 
 std::unique_ptr<Engine> Engine::instance = nullptr;
@@ -96,7 +99,8 @@ void Engine::DrawSandbox() {
     engine->DrawUI();
 }
 
-void Engine::ProcessInput() {
+void Engine::ProccesCameraMovement(){
+    //Mouse dragging for camera movement
     constexpr float MouseHoldThreshold = 0.2f; // Time in seconds to trigger camera movement
     auto engine{Engine::instance.get()};
     auto mouseDown {IsMouseButtonDown(MOUSE_LEFT_BUTTON)};
@@ -107,20 +111,30 @@ void Engine::ProcessInput() {
     else MouseDownTime = 0.0f;
     if (MouseDownTime >= MouseHoldThreshold) instance->MoveCamera(LastMousePosition);
 
-
     LastMousePosition[0] = GetMouseX();
     LastMousePosition[1] = GetMouseY();
 }
 
-void Engine::MoveCamera(Vec2& LastMousePosition) {
+void Engine::ProcessInput() {
+    //Mouse inputs
+    if (!Button::ProccessInputs()) instance->ProccesCameraMovement();
+
+    //Keyboard inputs
+
+    // Toggle editing mode with E key
+    if (IsKeyPressed(KEY_E)) {
+        instance->sandboxData->Edit.Enabled = !instance->sandboxData->Edit.Enabled;
+        instance->sandboxData->Edit.SelcectedNode.clear();
+    };
+
+    if (instance->sandboxData->Edit.Enabled) {
+        // Add node with left mouse button
+    }
+}
+
+void Engine::MoveCamera(const Vec2 LastMousePosition) {
     constexpr float MinimumMovementThreshold = 5.0f; // Minimum movement in pixels to trigger camera movement
-
-    std::cout << "Moving camera..." << "\n";
     auto mousePos = GetMousePosition();
-
-    std::cout << "Mouse position: " << mousePos.x << ", " << mousePos.y << "\n";
-    std::cout << "Last mouse position: " << LastMousePosition[0] << ", " << LastMousePosition[1] << "\n";
-    std::cout << "Delta: " << mousePos.x - LastMousePosition[0] << ", " << mousePos.y - LastMousePosition[1] << "\n";
 
     const auto deltaX {LastMousePosition[0] - mousePos.x};
     const auto deltaY {LastMousePosition[1] - mousePos.y};
@@ -158,9 +172,44 @@ void Engine::DrawUI() {
         + " "
         + std::to_string(GetMousePosition().y)};
 
-    const auto DeltaTime{"Delta Time: " + std::to_string(instance->env->DeltaTime)};
+    const auto DeltaTime{"FPS: " + std::to_string(GetFPS())};
 
     DrawText(CameraPosition.c_str(), 10, 10, 20, WHITE);
     DrawText(MousePosition.c_str(), 10, 40, 20, WHITE);
     DrawText(DeltaTime.c_str(), 10, 70, 20, WHITE);
+
+    auto DrawEditData = [] {
+        const auto node{instance->sandboxData->Edit.SelcectedNode};
+        const auto editText = node.empty() ? "No node selected" : "Selected node: " + node;
+
+        DrawText(editText.c_str(), 10, 100, 20, GREEN);
+        for (const auto nodetype: instance->NodeFactory | std::views::keys) {
+            Button::Draw(nodetype);
+        }
+    };
+
+    if (instance->sandboxData->Edit.Enabled) DrawEditData();
+}
+
+void Engine::DrawNode(const NodeAbstract& node) {
+    const auto NodeScreenPos{node.GetScreenPosition(instance->sandboxData->Camera)};
+    DrawCircle(NodeScreenPos[0], NodeScreenPos[1], 10, RED);
+}
+
+void Engine::RegisterNodeType(const std::string &typeName, std::function<std::unique_ptr<NodeAbstract>(Vec2 position)> factoryFunction){
+    instance->NodeFactory.insert_or_assign(typeName, factoryFunction);
+
+    Button::ButtonData buttonData{
+        .PosX = 10,
+        .PosY = 130 + 30 * static_cast<float>(instance->NodeFactory.size() - 1),
+        .Width = 150,
+        .Height = 20,
+        .HoverColor = LIGHTGRAY,
+        .Text = typeName,
+        .OnClick = [typeName](){
+            instance->sandboxData->Edit.SelcectedNode = typeName;
+            std::cout << "Selected node type: " << typeName << "\n";
+        }
+    };
+    Button button(typeName, buttonData);
 }

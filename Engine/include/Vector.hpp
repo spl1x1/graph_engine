@@ -1,6 +1,7 @@
 #ifndef VECROR_HPP
 #define VECROR_HPP
 
+#include <cmath>
 #include <raylib.h>
 #include <cstddef>
 #include <utility>
@@ -120,4 +121,6 @@ public:
         return *this = *this / scalar;
     };
 };
+
+using Vec2 = Vec<float, 2>;
 #endif // VECROR_HPP

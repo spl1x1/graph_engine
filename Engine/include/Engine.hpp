@@ -3,8 +3,10 @@
 
 #include "EngineTypes.hpp"
 
+#include <functional>
 #include <memory>
 #include <raylib.h>
+#include <unordered_map>
 
 
 class Engine{
@@ -16,13 +18,17 @@ class Engine{
     //Pointer to enviroment struct, passed at initialization
     Enviroment *env;
     SandboxData *sandboxData;
+    Nodes nodes;
+
+    std::unordered_map<std::string, std::function<std::unique_ptr<NodeAbstract>(Vec2 position)>> NodeFactory;
 
     void DrawBackground();
-    void DrawNode();
     void DrawEdge();
     void DrawGrid();
     void DrawUI();
-    void MoveCamera(Vec2& LastMousePosition);
+    void MoveCamera(const Vec2 LastMousePosition);
+    void DrawNode(const NodeAbstract& node);
+    void ProccesCameraMovement();
 
     static void DrawSandbox();
     static void ProcessInput();
@@ -41,7 +47,8 @@ public:
     static void Init(Enviroment *env, SandboxData *sandboxData);
     // Static method to start the main loop
     static void Loop();
-    static void LoadBackground(Background background);
+    static void LoadBackground(const Background background);
+    static void RegisterNodeType(const std::string& typeName, std::function<std::unique_ptr<NodeAbstract>(Vec2 position)> factoryFunction);
 };
 
 #endif // ENGINE_HPP
