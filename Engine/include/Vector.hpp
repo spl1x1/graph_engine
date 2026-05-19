@@ -26,6 +26,7 @@ public:
     Vec() = default;
     Vec(const Vec& other) = default;
     Vec(Vec&& other) = default;
+    Vec& operator=(const Vec& other) = default;
 
 
     Vec floor() const {

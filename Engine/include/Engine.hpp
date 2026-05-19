@@ -2,6 +2,7 @@
 #define ENGINE_HPP
 
 #include "EngineTypes.hpp"
+#include "Node.hpp"
 
 #include <functional>
 #include <memory>
@@ -20,15 +21,26 @@ class Engine{
     SandboxData *sandboxData;
     Nodes nodes;
 
-    std::unordered_map<std::string, std::function<std::unique_ptr<NodeAbstract>(Vec2 position)>> NodeFactory;
+    std::unordered_map<std::string, std::function<std::unique_ptr<INode>(Vec2 position)>> NodeFactory;
+    std::unordered_map<std::string, ClickEvent> ModeMap{{"REMOVE",ClickEvent::REMOVE}, {"ADD_EDGE", ClickEvent::ADD_EDGE}};
+
+    InputBlock inputBlock;
 
     void DrawBackground();
-    void DrawEdge();
-    void DrawGrid();
+    void DrawEdge(const Edge& edge);
+    void DrawNode(const INode& node);
     void DrawUI();
+
+    void DrawNodes();
+    void DrawEdges();
+
+    bool ProcessCameraMovement();
+    void ProcessButtons();
+    void ProcessEditInputs();
+    void ProcessNodeClick();
+
+    void ZoomCamera();
     void MoveCamera(const Vec2 LastMousePosition);
-    void DrawNode(const NodeAbstract& node);
-    void ProccesCameraMovement();
 
     static void DrawSandbox();
     static void ProcessInput();
@@ -48,7 +60,7 @@ public:
     // Static method to start the main loop
     static void Loop();
     static void LoadBackground(const Background background);
-    static void RegisterNodeType(const std::string& typeName, std::function<std::unique_ptr<NodeAbstract>(Vec2 position)> factoryFunction);
+    static void RegisterNodeType(const std::string& typeName, std::function<std::unique_ptr<INode>(Vec2 position)> factoryFunction);
 };
 
 #endif // ENGINE_HPP

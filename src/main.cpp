@@ -1,7 +1,7 @@
 #include <Engine.hpp>
 #include <EngineTypes.hpp>
 #include <functional>
-#include "OSPF.hpp"
+#include "Router.hpp"
 
 int main() {
     constexpr int windowWidth = 800;
@@ -27,7 +27,7 @@ int main() {
 
     Engine::Init(&env, &sandboxData);
     Engine::RegisterNodeType("Router", [](Vec2 position) {
-        return std::make_unique<RouterNode>(position);
+        return std::make_unique<Router>(position);
     });
     Engine::Loop();
     return 0;
