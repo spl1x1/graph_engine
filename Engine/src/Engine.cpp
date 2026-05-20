@@ -50,28 +50,27 @@ void Engine::Init(Enviroment *env, SandboxData *sandboxData) {
     LoadBackground(env->Background);
     std::cout << "Engine initialized" << "\n";
 
-    const auto RemoveWidgetData = WidgetDataTemplate(10, 130);
+
+    // Register UI widgets
+    const auto ClearWidgetData {WidgetDataTemplate(10, 130)};
+    const auto ClearButtonData {ButtonDataTemplate("Clear", [](){
+        instance->nodes.ClearSelectedNodes();
+        instance->sandboxData->Edit.SelectedMode.clear();
+    })};
+
+    const auto RemoveWidgetData = WidgetDataTemplate(10, 160);
     const auto RemoveButtonData = ButtonDataTemplate("Remove Node", [](){
         instance->sandboxData->Edit.SelectedMode = "REMOVE";
     });
 
-    Widget::Register("RemoveNodeButton", std::make_unique<Button>(RemoveWidgetData, RemoveButtonData));
-
-    const auto AddEdgeWidgetData {WidgetDataTemplate(170, 130)};
+    const auto AddEdgeWidgetData {WidgetDataTemplate(170, 160)};
     const auto AddEdgeButtonData {ButtonDataTemplate("Add Edge", [](){
         instance->sandboxData->Edit.SelectedMode = "ADD_EDGE";
     })};
 
+    Widget::Register("ClearButton", std::make_unique<Button>(ClearWidgetData, ClearButtonData));
     Widget::Register("AddEdgeButton", std::make_unique<Button>(AddEdgeWidgetData, AddEdgeButtonData));
-
     Widget::Register("RemoveNodeButton", std::make_unique<Button>(RemoveWidgetData, RemoveButtonData));
-
-    const auto ClearEdgeLinkWidgetData {WidgetDataTemplate(330, 130)};
-    const auto ClearEdgeLinkButtonData {ButtonDataTemplate("Clear Selected", [](){
-        instance->nodes.ClearSelectedNode();
-    })};
-
-    Widget::Register("ClearEdgeLinkButton", std::make_unique<Button>(ClearEdgeLinkWidgetData, ClearEdgeLinkButtonData));
 }
 
 void Engine::Loop() {
@@ -142,13 +141,13 @@ void Engine::DrawBackground() {
 }
 
 void Engine::DrawNodes() {
-    for (const auto& node: nodes.GetNodeList()) {
+    for (const auto& node: nodes.GetNodeMap() | std::views::values) {
         if (node) instance->DrawNode(*node);
     }
 }
 
 void Engine::DrawEdges() {
-    for (const auto& edge: nodes.GetEdgeList()) {
+    for (auto& edge: nodes.GetEdgeMap() | std::views::values) {
         instance->DrawEdge(edge);
     }
 }
@@ -253,8 +252,7 @@ void Engine::ProcessNodeClick() {
 void Engine::ProcessInput() {
     //Mouse inputs
     if (!instance->inputBlock.Blocked || instance->inputBlock.Type == InputBlock::BlockType::Button) instance->ProcessButtons();
-    if (instance->sandboxData->Edit.Enabled
-        && (!instance->inputBlock.Blocked || instance->inputBlock.Type == InputBlock::BlockType::Node)) instance->ProcessNodeClick();
+    if (!instance->inputBlock.Blocked || instance->inputBlock.Type == InputBlock::BlockType::Node) instance->ProcessNodeClick();
     if (!instance->inputBlock.Blocked || instance->inputBlock.Type == InputBlock::BlockType::Camera) instance->ProcessCameraMovement();
     if (instance->sandboxData->Edit.Enabled && !instance->inputBlock.Blocked) instance->ProcessEditInputs();
 
@@ -272,7 +270,7 @@ void Engine::ProcessInput() {
     if (IsKeyPressed(KEY_E)) {
         instance->sandboxData->Edit.Enabled = !instance->sandboxData->Edit.Enabled;
         instance->sandboxData->Edit.SelectedMode.clear();
-        instance->nodes.ClearSelectedNode();
+        instance->nodes.ClearSelectedNodes();
     };
 }
 
@@ -335,7 +333,6 @@ void Engine::DrawUI() {
         DrawText(editText.c_str(), 10, 100, 20, GREEN);
         Widget::Draw("RemoveNodeButton");
         Widget::Draw("AddEdgeButton");
-        Widget::Draw("ClearEdgeLinkButton");
         for (const auto nodetype: instance->NodeFactory | std::views::keys) {
             Widget::Draw(nodetype);
         }
@@ -347,15 +344,22 @@ void Engine::DrawUI() {
 
     if (instance->sandboxData->Edit.Enabled) DrawEditData();
     else DrawText("Press E to enter edit mode", 10, 100, 20, GREEN);
+    Widget::Draw("ClearButton");
 }
 
-void Engine::DrawNode(const INode& node) {
+void Engine::DrawNode(INode& node) {
     const auto NodeScreenPos{node.GetScreenPosition(instance->sandboxData->Camera)};
-    const auto zoom = instance->sandboxData->Zoom;
-    DrawCircle(NodeScreenPos[0] * zoom, NodeScreenPos[1] * zoom, node.GetRadius() * zoom, RED);
+    const auto zoom {instance->sandboxData->Zoom};
+    const auto id {node.GetData().Id};
+
+    const auto isConnected = !node.GetData().Edges.empty();
+    const auto baseColor = isConnected ? GREEN : RED;
+    const auto color{nodes.IsNodeSelected(id) ? ORANGE : baseColor};
+
+    DrawCircle(NodeScreenPos[0] * zoom, NodeScreenPos[1] * zoom, node.GetRadius() * zoom, color);
 }
 
-void Engine::DrawEdge(const Edge& edge) {
+void Engine::DrawEdge(Edge& edge) {
     const auto fromNode{nodes.GetNode(edge.NodeA)};
     const auto toNode{nodes.GetNode(edge.NodeB)};
 
@@ -365,7 +369,10 @@ void Engine::DrawEdge(const Edge& edge) {
     const auto toPos{toNode->GetScreenPosition(instance->sandboxData->Camera)};
     const auto zoom = instance->sandboxData->Zoom;
 
-    DrawLine(fromPos[0] * zoom, fromPos[1] * zoom, toPos[0] * zoom, toPos[1] * zoom, edge.Type == Edge::EdgeType::Directed ? BLUE : GREEN);
+    const auto color = (edge.Active == true ? GREEN : BLUE);
+    edge.Active = false;
+
+    DrawLine(fromPos[0] * zoom, fromPos[1] * zoom, toPos[0] * zoom, toPos[1] * zoom, color);
 }
 
 void Engine::RegisterNodeType(const std::string &typeName, std::function<std::unique_ptr<INode>(Vec2 position)> factoryFunction){
@@ -379,7 +386,7 @@ void Engine::RegisterNodeType(const std::string &typeName, std::function<std::un
 
     WidgetData data {
         .PosX = 10,
-        .PosY = 160 + 30 * static_cast<float>(instance->NodeFactory.size() - 1),
+        .PosY = 190 + 30 * static_cast<float>(instance->NodeFactory.size() - 1),
         .Width = 150,
         .Height = 20,
         .Border = {0.0f, WHITE}

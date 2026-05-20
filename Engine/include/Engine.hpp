@@ -27,8 +27,8 @@ class Engine{
     InputBlock inputBlock;
 
     void DrawBackground();
-    void DrawEdge(const Edge& edge);
-    void DrawNode(const INode& node);
+    void DrawEdge(Edge& edge);
+    void DrawNode(INode& node);
     void DrawUI();
 
     void DrawNodes();

@@ -18,6 +18,7 @@ struct Edge{
     uint16_t NodeB;
     uint16_t Id;
     int Weight;
+    bool Active{false};
 };
 
 struct NodePosition{
@@ -29,7 +30,9 @@ struct NodePosition{
 struct Message{
     uint16_t SenderId{0};
     uint16_t ReceiverId{0};
-    uint16_t LastNodeId{0};
+
+    uint16_t DestinationId{0}; // Final destination of the message, used for routing
+    uint16_t OriginId{0}; // Original sender of the message, used for routing and response messages
 
     std::string Content;
 };
@@ -77,16 +80,16 @@ public:
 };
 
 class Nodes{
-    std::vector<std::unique_ptr<INode>> nodeList{};
-    std::vector<Edge> edgeList{};
-
-    std::map<uint16_t, int> nodes{};
-    std::map<uint16_t, int> edges{};
+    std::map<uint16_t, std::unique_ptr<INode>> nodes{};
+    std::map<uint16_t, Edge> edges{};
 
     uint16_t nodeIdCounter{1};
     uint16_t edgeIdCounter{1};
 
-    uint16_t selectedNodeId{0};
+    struct SelectedNodes{
+        uint16_t NodeA{0};
+        uint16_t NodeB{0};
+    } selectedNodes;
 
 public:
     void AddNode(std::unique_ptr<INode> node);
@@ -98,12 +101,14 @@ public:
     INode* GetNode(const uint16_t id) const;
     Edge* GetEdge(const uint16_t id);
 
-    std::vector<std::unique_ptr<INode>>& GetNodeList();
-    std::vector<Edge> GetEdgeList();
+    bool IsNodeSelected(uint16_t id) const;
+
+    std::map<uint16_t, std::unique_ptr<INode>>& GetNodeMap();
+    std::map<uint16_t,Edge>& GetEdgeMap();
 
     bool ProcessNodeClick(const Vec2 MousePos, ClickEvent clickEvent = ClickEvent::NONE);
 
-    void ClearSelectedNode();
+    void ClearSelectedNodes();
     void ClearEdgesFromSelectedNode();
 };
 

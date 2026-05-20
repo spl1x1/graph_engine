@@ -24,7 +24,7 @@ void Router::SendMessage(Message message){
         std::cerr << "Error: Router with id " << Data.Id << " is not connected to a network. Message not sent." << std::endl;
         return;
     };
-    message.LastNodeId = Data.Id;
+    message.SenderId = Data.Id;
     BasicNodeOperations::SendMessage(message, *Data.Network);
 }
 
