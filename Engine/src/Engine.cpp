@@ -68,9 +68,21 @@ void Engine::Init(Enviroment *env, SandboxData *sandboxData) {
         instance->sandboxData->Edit.SelectedMode = "ADD_EDGE";
     })};
 
+    const auto AddEdgeDirectedWidgetData {WidgetDataTemplate(170, 190)};
+    const auto AddEdgeDirectedButtonData {ButtonDataTemplate("Add Directed Edge", [](){
+        instance->sandboxData->Edit.SelectedMode = "ADD_EDGE_DIRECTED";
+    })};
+
     Widget::Register("ClearButton", std::make_unique<Button>(ClearWidgetData, ClearButtonData));
     Widget::Register("AddEdgeButton", std::make_unique<Button>(AddEdgeWidgetData, AddEdgeButtonData));
     Widget::Register("RemoveNodeButton", std::make_unique<Button>(RemoveWidgetData, RemoveButtonData));
+    Widget::Register("AddEdgeDirectedButton", std::make_unique<Button>(AddEdgeDirectedWidgetData, AddEdgeDirectedButtonData));
+
+    Widget::AddToGroup(
+        "EditButtons", {
+            "RemoveNodeButton",
+            "AddEdgeButton",
+            "AddEdgeDirectedButton"});
 }
 
 void Engine::Loop() {
@@ -160,7 +172,7 @@ void Engine::DrawSandbox() {
     engine->DrawUI();
 }
 
-bool Engine::ProcessCameraMovement(){
+void Engine::ProcessCameraMovement(){
     //Mouse dragging for camera movement
     constexpr float MouseHoldThreshold = 0.2f; // Time in seconds to trigger camera movement
     auto engine{Engine::instance.get()};
@@ -174,7 +186,6 @@ bool Engine::ProcessCameraMovement(){
 
     LastMousePosition[0] = GetMouseX();
     LastMousePosition[1] = GetMouseY();
-    return (MouseDownTime >= MouseHoldThreshold);
 }
 
 void Engine::ProcessButtons() {
@@ -185,6 +196,7 @@ void Engine::ProcessButtons() {
 }
 
 void Engine::ProcessEditInputs() {
+    if (!instance->sandboxData->Edit.Enabled) return;
     const auto AddNode = [&](){
         Vec2 mousePos{GetMousePosition().x, GetMousePosition().y};
         const auto zoom {instance->sandboxData->Zoom};
@@ -240,21 +252,20 @@ void Engine::ProcessNodeClick() {
     Vec2 worldPos{mousePos[0] / zoom + instance->sandboxData->Camera[0], mousePos[1] / zoom + instance->sandboxData->Camera[1]};
 
     const auto mode{instance->sandboxData->Edit.SelectedMode};
-    auto it {instance->ModeMap.find(mode)};
-    auto event {it== ModeMap.end() ? ClickEvent::NONE : it->second};
 
     instance->inputBlock = {
-        .Blocked = instance-> nodes.ProcessNodeClick(worldPos,event),
+        .Blocked = instance-> nodes.ProcessNodeClick(worldPos,Event::StringToClick(mode)),
         .Type = InputBlock::BlockType::Node
     };
 }
 
+
 void Engine::ProcessInput() {
     //Mouse inputs
-    if (!instance->inputBlock.Blocked || instance->inputBlock.Type == InputBlock::BlockType::Button) instance->ProcessButtons();
-    if (!instance->inputBlock.Blocked || instance->inputBlock.Type == InputBlock::BlockType::Node) instance->ProcessNodeClick();
-    if (!instance->inputBlock.Blocked || instance->inputBlock.Type == InputBlock::BlockType::Camera) instance->ProcessCameraMovement();
-    if (instance->sandboxData->Edit.Enabled && !instance->inputBlock.Blocked) instance->ProcessEditInputs();
+
+    #define ENTRY(type, func) if (instance->inputBlock.Blocked && instance->inputBlock.Type == InputBlock::BlockType::type) func;
+     INPUT_TABLE
+    #undef ENTRY
 
     if (instance->inputBlock.BlockLoop <= 0 ) {instance->inputBlock = {
         .Blocked = false,
@@ -331,8 +342,7 @@ void Engine::DrawUI() {
         const auto editText = node.empty() ? "No node selected" : "Selected node: " + node;
 
         DrawText(editText.c_str(), 10, 100, 20, GREEN);
-        Widget::Draw("RemoveNodeButton");
-        Widget::Draw("AddEdgeButton");
+        Widget::DrawGroup("EditButtons");
         for (const auto nodetype: instance->NodeFactory | std::views::keys) {
             Widget::Draw(nodetype);
         }
@@ -376,8 +386,7 @@ void Engine::DrawEdge(Edge& edge) {
 }
 
 void Engine::RegisterNodeType(const std::string &typeName, std::function<std::unique_ptr<INode>(Vec2 position)> factoryFunction){
-
-    if (instance->ModeMap.contains(typeName)) {
+    if (typeName=="NONE" || Event::StringToClick(typeName) != Event::Click::NONE){
         std::cerr << "Cannot register node type with reserved name: " << typeName << "\n";
         return;
     }

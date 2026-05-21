@@ -109,7 +109,7 @@ Edge* Nodes::GetEdge(const uint16_t id) {
 }
 
 
-bool Nodes::ProcessNodeClick(const Vec2 MousePos, ClickEvent clickEvent){
+bool Nodes::ProcessNodeClick(const Vec2 MousePos, Event::Click clickEvent){
     uint16_t nodeId{0};
 
     auto UpdateNodeSelection = [&]() -> SelectedNodes{
@@ -131,18 +131,18 @@ bool Nodes::ProcessNodeClick(const Vec2 MousePos, ClickEvent clickEvent){
     }
     if (nodeId == 0) return false;
 
-    if (clickEvent == ClickEvent::NONE) {
+    if (clickEvent == Event::Click::NONE) {
         GetNode(nodeId)->NodeClicked();
         ClearSelectedNodes();
         selectedNodes.NodeA = nodeId;
     }
-    else if (clickEvent == ClickEvent::REMOVE)
+    else if (clickEvent == Event::Click::REMOVE)
     {
         selectedNodes = UpdateNodeSelection();
         RemoveNode(nodeId);
         ClearSelectedNodes();
     }
-    else if (clickEvent == ClickEvent::ADD_EDGE){
+    else if (clickEvent == Event::Click::ADD_EDGE){
         selectedNodes = UpdateNodeSelection();
         if (selectedNodes.NodeA != 0 && selectedNodes.NodeB != 0){
         AddEdge(Edge{.NodeA = selectedNodes.NodeA, .NodeB = selectedNodes.NodeB});

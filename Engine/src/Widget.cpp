@@ -3,6 +3,7 @@
 #include <ranges>
 
 std::unordered_map<std::string, std::unique_ptr<Widget>> Widget::widgetPool{};
+std::unordered_map<std::string, std::vector<std::string>> Widget::widgetGroups{};
 
 void Widget::Register(const std::string& key, std::unique_ptr<Widget> widget){
     widgetPool.insert_or_assign(key, std::move(widget));
@@ -49,4 +50,37 @@ bool Widget::ProccessInputs(){
 bool Widget::CheckCollision(Vector2 point) const {
     return point.x >= Data.PosX && point.x <= Data.PosX + Data.Width &&
            point.y >= Data.PosY && point.y <= Data.PosY + Data.Height;
+}
+
+void Widget::AddToGroup(const std::string& groupKey, const std::string& widgetKey){
+    if (!widgetPool.contains(widgetKey)) return;
+    if (!widgetGroups.contains(groupKey)){
+        widgetGroups.insert_or_assign(groupKey,std::vector<std::string>{widgetKey});
+        return;
+    };
+    widgetGroups.at(groupKey).push_back(widgetKey);
+}
+
+void Widget::DrawGroup(const std::string& groupKey){
+    if (!widgetGroups.contains(groupKey)) return;
+    for (auto widget : widgetGroups.at(groupKey)) Draw(widget);
+}
+
+void Widget::DestroyGroup(const std::string& groupKey){
+    if (!widgetGroups.contains(groupKey)) return;
+    widgetGroups.erase(groupKey);
+}
+
+void Widget::RemoveFromGroup(const std::string& groupKey, const std::string& widgetKey){
+    if (!widgetGroups.contains(groupKey)) return;
+    auto &group = widgetGroups.at(groupKey);
+    group.erase(std::remove(group.begin(), group.end(), widgetKey), group.end());
+}
+
+void Widget::AddToGroup(const std::string &groupKey,  const std::vector<std::string> widgets) {
+    if (!widgetGroups.contains(groupKey)){
+        widgetGroups.insert_or_assign(groupKey,widgets);
+        return;
+    };
+    for (const auto& widgetKey: widgets) AddToGroup(groupKey, widgetKey);
 }

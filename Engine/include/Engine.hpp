@@ -22,7 +22,6 @@ class Engine{
     Nodes nodes;
 
     std::unordered_map<std::string, std::function<std::unique_ptr<INode>(Vec2 position)>> NodeFactory;
-    std::unordered_map<std::string, ClickEvent> ModeMap{{"REMOVE",ClickEvent::REMOVE}, {"ADD_EDGE", ClickEvent::ADD_EDGE}};
 
     InputBlock inputBlock;
 
@@ -34,7 +33,7 @@ class Engine{
     void DrawNodes();
     void DrawEdges();
 
-    bool ProcessCameraMovement();
+    void ProcessCameraMovement();
     void ProcessButtons();
     void ProcessEditInputs();
     void ProcessNodeClick();

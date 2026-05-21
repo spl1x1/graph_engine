@@ -37,10 +37,33 @@ struct Message{
     std::string Content;
 };
 
-enum class ClickEvent{
-    REMOVE,
-    ADD_EDGE,
-    NONE
+#define ClickEvents \
+        ENTRY(REMOVE) \
+        ENTRY(ADD_EDGE) \
+        ENTRY(ADD_EDGE_DIRECTED) \
+        ENTRY(NONE)
+
+struct Event{
+    enum class Click{
+    #define ENTRY(name) name,
+    ClickEvents
+    #undef ENTRY
+    };
+
+    static std::string ClickToString(Click click){
+        switch (click){
+        #define ENTRY(name) case Click::name: return #name;
+        ClickEvents
+        #undef ENTRY
+        }
+    }
+
+    static Click StringToClick(const std::string& str){
+        #define ENTRY(name) if (str == #name) return Click::name;
+        ClickEvents
+        #undef ENTRY
+        return Click::NONE;
+    }
 };
 
 struct NodeData{
@@ -106,7 +129,7 @@ public:
     std::map<uint16_t, std::unique_ptr<INode>>& GetNodeMap();
     std::map<uint16_t,Edge>& GetEdgeMap();
 
-    bool ProcessNodeClick(const Vec2 MousePos, ClickEvent clickEvent = ClickEvent::NONE);
+    bool ProcessNodeClick(const Vec2 MousePos, Event::Click clickEvent = Event::Click::NONE);
 
     void ClearSelectedNodes();
     void ClearEdgesFromSelectedNode();

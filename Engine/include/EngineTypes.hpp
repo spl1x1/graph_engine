@@ -47,17 +47,36 @@ struct EditMode{
     std::string SelectedMode;
 };
 
+#define INPUT_TABLE \
+        ENTRY(None, (void)0) \
+        ENTRY(Button, instance->ProcessButtons()) \
+        ENTRY(Node, instance->ProcessNodeClick()) \
+        ENTRY(Camera, instance->ProcessCameraMovement())
+
 struct InputBlock{
     bool Blocked;
     int BlockLoop{0};
-    enum class BlockType{
-        None,
-        Button,
-        Camera,
-        Node
-    } Type;
-};
 
+    enum class BlockType{
+    #define ENTRY(type,func) type,
+        INPUT_TABLE
+    #undef ENTRY
+    } Type{BlockType::None};
+
+    static std::string BlockTypeToString(BlockType type){
+        switch (type) {
+            #define ENTRY(a, b) case BlockType::a: return #a;
+            INPUT_TABLE
+            #undef ENTRY
+        }
+    };
+    static BlockType StringToBlockType(const std::string& str){
+        #define ENTRY(a, b) if (str == #a) return BlockType::a;
+        INPUT_TABLE
+        #undef ENTRY
+        return BlockType::None;
+    };
+};
 
 struct SandboxData{
     Vec2 Camera;
