@@ -3,12 +3,12 @@
 #include <iostream>
 #include <ranges>
 #include <string>
-#include "Engine.hpp"
-#include "EngineTypes.hpp"
-#include "Node.hpp"
-#include "Widget.hpp"
-#include "raylib.h"
-#include "Button.hpp"
+#include <Engine.hpp>
+#include <EngineTypes.hpp>
+#include <Node.hpp>
+#include <Widget.hpp>
+#include <raylib.h>
+#include <Button.hpp>
 
 
 std::unique_ptr<Engine> Engine::instance = nullptr;
@@ -27,6 +27,16 @@ void Engine::Init(Enviroment *env, SandboxData *sandboxData) {
             .PosX = PosX,
             .PosY = PosY,
             .Width = 150,
+            .Height = 20,
+            .Border = {0.0f, WHITE}
+        };
+    };
+
+    const auto SmallWidgetDataTemplate = [] (const float PosX, const float PosY) -> WidgetData {
+        return WidgetData{
+            .PosX = PosX,
+            .PosY = PosY,
+            .Width = 20,
             .Height = 20,
             .Border = {0.0f, WHITE}
         };
@@ -68,21 +78,54 @@ void Engine::Init(Enviroment *env, SandboxData *sandboxData) {
         instance->sandboxData->Edit.SelectedMode = "ADD_EDGE";
     })};
 
-    const auto AddEdgeDirectedWidgetData {WidgetDataTemplate(170, 190)};
-    const auto AddEdgeDirectedButtonData {ButtonDataTemplate("Add Directed Edge", [](){
-        instance->sandboxData->Edit.SelectedMode = "ADD_EDGE_DIRECTED";
-    })};
+    const auto AreaOctet1PlusWidgetData = SmallWidgetDataTemplate(env->Window.Width - 220, 160);
+    const auto AreaOctet1PlusButtonData = ButtonDataTemplate("+", [](){
+        instance->sandboxData->Edit.SelectedNetworkArea.octets[0]++;
+    });
+
+    const auto AreaOctet1MinusWidgetData = SmallWidgetDataTemplate(env->Window.Width - 200, 160);
+    const auto AreaOctet1MinusButtonData = ButtonDataTemplate("-", [](){
+        instance->sandboxData->Edit.SelectedNetworkArea.octets[0]--;
+    });
+
+    const auto AreaOctet2PlusWidgetData = SmallWidgetDataTemplate(env->Window.Width - 180, 160);
+    const auto AreaOctet2PlusButtonData = ButtonDataTemplate("+", [](){
+        instance->sandboxData->Edit.SelectedNetworkArea.octets[1]++;
+    });
+
+    const auto AreaOctet2MinusWidgetData = SmallWidgetDataTemplate(env->Window.Width - 160,160);
+    const auto AreaOctet2MinusButtonData = ButtonDataTemplate("-", [](){
+        instance->sandboxData->Edit.SelectedNetworkArea.octets[1]--;
+    });
+
+    const auto LinkSpeedWidgetData = WidgetDataTemplate(env->Window.Width - 220, 220);
+    const auto LinkSpeedButtonData = ButtonDataTemplate("Link Speed", [](){
+        auto newSpeed{(static_cast<int>(instance->sandboxData->Edit.SelectedSpeed) + 1) % LinkSpeedsCount};
+        instance->sandboxData->Edit.SelectedSpeed = static_cast<LinkSpeed>(newSpeed);
+        instance->nodes.SelectedLinkSpeed = instance->sandboxData->Edit.SelectedSpeed;
+    });
+
 
     Widget::Register("ClearButton", std::make_unique<Button>(ClearWidgetData, ClearButtonData));
     Widget::Register("AddEdgeButton", std::make_unique<Button>(AddEdgeWidgetData, AddEdgeButtonData));
     Widget::Register("RemoveNodeButton", std::make_unique<Button>(RemoveWidgetData, RemoveButtonData));
-    Widget::Register("AddEdgeDirectedButton", std::make_unique<Button>(AddEdgeDirectedWidgetData, AddEdgeDirectedButtonData));
+    Widget::Register("AreaOctet1PlusButton", std::make_unique<Button>(AreaOctet1PlusWidgetData, AreaOctet1PlusButtonData));
+    Widget::Register("AreaOctet1MinusButton", std::make_unique<Button>(AreaOctet1MinusWidgetData, AreaOctet1MinusButtonData));
+    Widget::Register("AreaOctet2PlusButton", std::make_unique<Button>(AreaOctet2PlusWidgetData, AreaOctet2PlusButtonData));
+    Widget::Register("AreaOctet2MinusButton", std::make_unique<Button>(AreaOctet2MinusWidgetData, AreaOctet2MinusButtonData));
+    Widget::Register("LinkSpeedButton", std::make_unique<Button>(LinkSpeedWidgetData, LinkSpeedButtonData));
 
     Widget::AddToGroup(
         "EditButtons", {
-            "RemoveNodeButton",
-            "AddEdgeButton",
-            "AddEdgeDirectedButton"});
+        "ClearButton",
+        "AddEdgeButton",
+        "RemoveNodeButton",
+        "AreaOctet1PlusButton",
+        "AreaOctet1MinusButton",
+        "AreaOctet2PlusButton",
+        "AreaOctet2MinusButton",
+        "LinkSpeedButton"
+        });
 }
 
 void Engine::Loop() {
@@ -203,7 +246,7 @@ void Engine::ProcessEditInputs() {
         Vec2 worldPos{mousePos[0] / zoom + instance->sandboxData->Camera[0], mousePos[1] / zoom + instance->sandboxData->Camera[1]};
 
         auto node = instance->NodeFactory.at(instance->sandboxData->Edit.SelectedMode)(worldPos);
-        instance->nodes.AddNode(std::move(node));
+        instance->nodes.AddNode(std::move(node), instance->sandboxData->Edit.SelectedNetworkArea);
      };
 
     if (!IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) return;
@@ -259,22 +302,7 @@ void Engine::ProcessNodeClick() {
     };
 }
 
-
-void Engine::ProcessInput() {
-    //Mouse inputs
-
-    #define ENTRY(type, func) if (instance->inputBlock.Blocked && instance->inputBlock.Type == InputBlock::BlockType::type) func;
-     INPUT_TABLE
-    #undef ENTRY
-
-    if (instance->inputBlock.BlockLoop <= 0 ) {instance->inputBlock = {
-        .Blocked = false,
-        .Type = InputBlock::BlockType::None};
-    }
-    else instance->inputBlock.BlockLoop--;
-
-    if (GetMouseWheelMove() != 0) instance->ZoomCamera();
-
+void Engine::ProcessKeyboard(){
     //Keyboard inputs
 
     // Toggle editing mode with E key
@@ -283,6 +311,59 @@ void Engine::ProcessInput() {
         instance->sandboxData->Edit.SelectedMode.clear();
         instance->nodes.ClearSelectedNodes();
     };
+    if (IsKeyPressed(KEY_R)) {
+        instance->sandboxData->Edit.SelectedMode.clear();
+        instance->nodes.ClearSelectedNodes();
+    }
+    if (IsKeyPressed(KEY_T)) {
+        instance->sandboxData->TextInputActive = true;
+    }
+    if (IsKeyPressed(KEY_H)) {
+        sandboxData->ShowSpeed = !sandboxData->ShowSpeed;
+    }
+}
+
+void Engine::ResetInputBlock() {
+    instance->inputBlock = {
+        .Blocked = false,
+        .Type = InputBlock::BlockType::None
+    };
+}
+
+void Engine::ProcessTextInput(){
+    if (!sandboxData->TextInputActive) return;
+
+    instance->inputBlock = {
+      .Blocked = true,
+      .BlockLoop = 1, //Block input for one loop to prevent processing other inputs while typing
+      .Type = InputBlock::BlockType::TextInput,
+    };
+
+    static std::string buffer;
+    int key = GetCharPressed();
+    while (key > 0) {
+        buffer += static_cast<char>(key);
+        key = GetCharPressed();
+        if (IsKeyPressed(KEY_T)) {sandboxData->TextInputActive = false;};
+    }
+    if (buffer.empty()) return;
+
+    std::cout << "Text input: " << buffer << "\n";
+    buffer.clear();
+};
+
+
+void Engine::ProcessInput() {
+    //Mouse inputs
+
+    #define ENTRY(type, func) if (!instance->inputBlock.Blocked || instance->inputBlock.Type == InputBlock::BlockType::type) func;
+     INPUT_TABLE
+    #undef ENTRY
+
+    if (instance->inputBlock.BlockLoop <= 0 ) instance->ResetInputBlock();
+    else instance->inputBlock.BlockLoop--;
+
+    if (GetMouseWheelMove() != 0) instance->ZoomCamera();
 }
 
 void Engine::MoveCamera(const Vec2 LastMousePosition) {
@@ -337,11 +418,14 @@ void Engine::DrawUI() {
             + std::to_string(GetFrameTime()));
     };
 
-    auto DrawEditData = [] {
-        const auto node{instance->sandboxData->Edit.SelectedMode};
-        const auto editText = node.empty() ? "No node selected" : "Selected node: " + node;
+    auto DrawEditData = [&] {
+        const auto mode{instance->sandboxData->Edit.SelectedMode};
+        const auto editText = mode.empty() ? "No mode selected" : "Selected mode: " + mode + " | Press R to clear selection";
 
         DrawText(editText.c_str(), 10, 100, 20, GREEN);
+        DrawText((instance->sandboxData->Edit.SelectedNetworkArea.ToString()).c_str(), env->Window.Width - 220, 140, 20, GREEN);
+        DrawText((std::format("{:.1f} Mbps", GetSpeedMbps(instance->sandboxData->Edit.SelectedSpeed))).c_str(), env->Window.Width - 220, 190, 20, GREEN);
+
         Widget::DrawGroup("EditButtons");
         for (const auto nodetype: instance->NodeFactory | std::views::keys) {
             Widget::Draw(nodetype);
@@ -353,7 +437,7 @@ void Engine::DrawUI() {
     DrawText(EnvInfoString().c_str(), 10, 70, 20, WHITE);
 
     if (instance->sandboxData->Edit.Enabled) DrawEditData();
-    else DrawText("Press E to enter edit mode", 10, 100, 20, GREEN);
+    else DrawText("Press E to enter edit mode | Press R to clear selected", 10, 100, 20, GREEN);
     Widget::Draw("ClearButton");
 }
 
@@ -370,8 +454,8 @@ void Engine::DrawNode(INode& node) {
 }
 
 void Engine::DrawEdge(Edge& edge) {
-    const auto fromNode{nodes.GetNode(edge.NodeA)};
-    const auto toNode{nodes.GetNode(edge.NodeB)};
+    const auto fromNode{nodes.GetNode(edge.Key.NodeA)};
+    const auto toNode{nodes.GetNode(edge.Key.NodeB)};
 
     if (fromNode == nullptr || toNode == nullptr) return;
 
@@ -379,10 +463,24 @@ void Engine::DrawEdge(Edge& edge) {
     const auto toPos{toNode->GetScreenPosition(instance->sandboxData->Camera)};
     const auto zoom = instance->sandboxData->Zoom;
 
-    const auto color = (edge.Active == true ? GREEN : BLUE);
+    const auto areaColor = fromNode->GetData().Address.compareArea(toNode->GetData().Address) ? GREEN : BLUE;
+    const auto color = (edge.Active == true ? YELLOW : areaColor);
     edge.Active = false;
 
-    DrawLine(fromPos[0] * zoom, fromPos[1] * zoom, toPos[0] * zoom, toPos[1] * zoom, color);
+    const Vector2 fromScreen{fromPos[0] * zoom, fromPos[1] * zoom};
+    const Vector2 toScreen{toPos[0] * zoom, toPos[1] * zoom};
+
+    auto linkSpeedMbps = GetSpeedMbps(edge.Speed);
+    constexpr float ThicknessScaleMultiplier = 1.2f;
+    const auto thickness = static_cast<float>(std::log2(linkSpeedMbps)) * zoom * ThicknessScaleMultiplier;
+    for (float i = -thickness / 2; i <= thickness / 2; i += 1.0f) {
+        DrawLineEx(fromScreen, toScreen, std::abs(i), color);
+    }
+
+    if (sandboxData->ShowSpeed){
+    const Vector2 midPoint{(fromScreen.x + toScreen.x) / 2, (fromScreen.y + toScreen.y) / 2};
+    DrawText(std::format("{:.1f} Mbps", linkSpeedMbps).c_str(), midPoint.x + 5, midPoint.y + 5, 20, WHITE);
+    }
 }
 
 void Engine::RegisterNodeType(const std::string &typeName, std::function<std::unique_ptr<INode>(Vec2 position)> factoryFunction){

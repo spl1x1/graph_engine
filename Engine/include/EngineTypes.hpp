@@ -1,10 +1,11 @@
 #ifndef ENGINE_TYPES_HPP
 #define ENGINE_TYPES_HPP
 
+#include "Node.hpp"
 #include <string>
 #include <sys/types.h>
-#include "Vector.hpp"
-#include "raylib.h"
+#include <Vector.hpp>
+#include <raylib.h>
 
 Vec2 operator+(Vec2 vec, Vector2 RaylibVec2);
 Vec2 operator-(Vec2 vec, Vector2 RaylibVec2);
@@ -45,13 +46,18 @@ struct Enviroment{
 struct EditMode{
     bool Enabled;
     std::string SelectedMode;
+    IPAddress SelectedNetworkArea;
+    LinkSpeed SelectedSpeed{LinkSpeed::MEDIUM};
 };
 
 #define INPUT_TABLE \
         ENTRY(None, (void)0) \
         ENTRY(Button, instance->ProcessButtons()) \
+        ENTRY(TextInput, instance->ProcessTextInput()) \
         ENTRY(Node, instance->ProcessNodeClick()) \
-        ENTRY(Camera, instance->ProcessCameraMovement())
+        ENTRY(Camera, instance->ProcessCameraMovement()) \
+        ENTRY(Edit, instance->ProcessEditInputs()) \
+        ENTRY(KeyboardInput, instance->ProcessKeyboard())
 
 struct InputBlock{
     bool Blocked;
@@ -82,5 +88,7 @@ struct SandboxData{
     Vec2 Camera;
     float Zoom;
     EditMode Edit;
+    bool TextInputActive{false};
+    bool ShowSpeed{false};
 };
 #endif // ENGINE_TYPES_HPP

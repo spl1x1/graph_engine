@@ -1,8 +1,14 @@
-#include "Dialog.hpp"
+#include <Widget.hpp>
+#include <Dialog.hpp>
 
+Dialog::Dialog(WidgetData data, DialogData dialogInfo): Widget(data), DialogInfo(dialogInfo){
+    for (const auto& element : DialogInfo.WidgetKeys) ConstructRelativePosition(element,data);
+}
 
 void Dialog::Draw() {
-    DrawRectangle(Data.PosX, Data.PosY, Data.Width, Data.Height, GRAY);
-    DrawText(DialogInfo.Title.c_str(), Data.PosX + 10, Data.PosY + 10, 20, WHITE);
-    DrawText(DialogInfo.Content.c_str(), Data.PosX + 10, Data.PosY + 40, 20, LIGHTGRAY);
+    const auto color {Data.Border.Color};
+    DrawBorder(color);
+    DrawText(DialogInfo.Title.c_str(), Data.PosX + 10, Data.PosY + 10, 20, color);
+
+    for (const auto& element : DialogInfo.WidgetKeys) Widget::Draw(element);
 }

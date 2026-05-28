@@ -1,12 +1,11 @@
 #ifndef BUTTON_HPP
 #define BUTTON_HPP
 
-#include "Widget.hpp"
+#include <Widget.hpp>
 #include <string>
 #include <functional>
 
 struct ButtonData{
-    bool InvertedColors{false};
     Color IdleColor{WHITE};
     Color HoverColor{YELLOW};
     Color ActiveColor{GREEN};

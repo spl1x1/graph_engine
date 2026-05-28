@@ -1,5 +1,5 @@
-#include "Button.hpp"
-#include "raylib.h"
+#include <Button.hpp>
+#include <raylib.h>
 
 
 void Button::Draw() {
@@ -8,12 +8,7 @@ void Button::Draw() {
     const auto textX {Data.PosX + (Data.Width - textWidth) / 2};
     const auto textY {Data.PosY + (Data.Height - 20) / 2};
 
-    if (ButtonInfo.InvertedColors) {
-        DrawRectangle(Data.PosX, Data.PosY, Data.Width, Data.Height, color);
-        DrawText(ButtonInfo.Text.c_str(), textX, textY, 20, BLACK);
-        return;
-    }
-    DrawRectangleLines(Data.PosX, Data.PosY, Data.Width, Data.Height, color);
+    DrawBorder(color);
     DrawText(ButtonInfo.Text.c_str(), textX, textY, 20, color);
 }
 

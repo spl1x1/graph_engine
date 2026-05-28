@@ -4,8 +4,8 @@
 #include "Router.hpp"
 
 int main() {
-    constexpr int windowWidth = 800;
-    constexpr int windowHeight = 600;
+    constexpr int windowWidth = 1200;
+    constexpr int windowHeight = 960;
 
     constexpr int sandboxWidth = 2000;
     constexpr int sandboxHeight = 2000;

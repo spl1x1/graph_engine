@@ -24,7 +24,7 @@ void Router::SendMessage(Message message){
         std::cerr << "Error: Router with id " << Data.Id << " is not connected to a network. Message not sent." << std::endl;
         return;
     };
-    message.SenderId = Data.Id;
+    message.SenderAddress = Data.Address;
     BasicNodeOperations::SendMessage(message, *Data.Network);
 }
 
@@ -37,5 +37,5 @@ NodeData& Router::GetData(){
 }
 
 void Router::NodeClicked() {
-    std::cout << "Router " << Data.Id << " clicked. Message queue size: " << Data.MessageQueue.size() << std::endl;
+    std::cout << "Router " << Data.Id << " " << Data.Address.ToString()  << " clicked. Message queue size: " << Data.MessageQueue.size() << std::endl;
 };

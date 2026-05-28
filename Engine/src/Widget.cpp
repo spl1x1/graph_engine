@@ -1,9 +1,12 @@
 #include "Widget.hpp"
+#include "raylib.h"
 #include <iostream>
 #include <ranges>
+#include <vector>
 
 std::unordered_map<std::string, std::unique_ptr<Widget>> Widget::widgetPool{};
 std::unordered_map<std::string, std::vector<std::string>> Widget::widgetGroups{};
+std::queue<std::string> Widget::inputBlockingWidgets{};
 
 void Widget::Register(const std::string& key, std::unique_ptr<Widget> widget){
     widgetPool.insert_or_assign(key, std::move(widget));
@@ -83,4 +86,30 @@ void Widget::AddToGroup(const std::string &groupKey,  const std::vector<std::str
         return;
     };
     for (const auto& widgetKey: widgets) AddToGroup(groupKey, widgetKey);
+}
+
+void Widget::DrawBorder(Color color) const {
+    if (Data.Border.Enabled)
+        DrawRectangleLines(Data.PosX, Data.PosY, Data.Width, Data.Height, color);
+}
+
+void Widget::ConstructRelativePosition(const std::string& key, WidgetData rootData){
+    const auto widget{Widget::GetWidget(key)};
+    if (!widget) return;
+    widget->Data.PosX += rootData.PosX;
+    widget->Data.PosY += rootData.PosY;
+}
+
+void Widget::ProccessInputWidgets(){
+    while (!inputBlockingWidgets.empty()) {
+        auto widgetKey = inputBlockingWidgets.front();
+        if (auto widget = Widget::GetWidget(widgetKey); widget != nullptr)
+            widget->ProccesInput();
+        inputBlockingWidgets.pop();
+    }
+}
+
+void Widget::QueueInputWidget(const std::string& widgetKey){
+    if (!widgetPool.contains(widgetKey)) return;
+    inputBlockingWidgets.push(widgetKey);
 }

@@ -1,8 +1,8 @@
 #ifndef ENGINE_HPP
 #define ENGINE_HPP
 
-#include "EngineTypes.hpp"
-#include "Node.hpp"
+#include <EngineTypes.hpp>
+#include <Node.hpp>
 
 #include <functional>
 #include <memory>
@@ -19,7 +19,7 @@ class Engine{
     //Pointer to enviroment struct, passed at initialization
     Enviroment *env;
     SandboxData *sandboxData;
-    Nodes nodes;
+    NodeNetwork nodes;
 
     std::unordered_map<std::string, std::function<std::unique_ptr<INode>(Vec2 position)>> NodeFactory;
 
@@ -33,10 +33,14 @@ class Engine{
     void DrawNodes();
     void DrawEdges();
 
+    void ResetInputBlock();
+
     void ProcessCameraMovement();
     void ProcessButtons();
     void ProcessEditInputs();
     void ProcessNodeClick();
+    void ProcessKeyboard();
+    void ProcessTextInput();
 
     void ZoomCamera();
     void MoveCamera(const Vec2 LastMousePosition);
