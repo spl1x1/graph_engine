@@ -60,9 +60,9 @@ void Router::PrintTopologyDatabase() const {
     std::cout << "\n" << std::string(70, '=') << "\n";
     std::cout << "TOPOLOGY DATABASE STATE FOR ROUTER " << Data.Id << " (" << Data.Address.ToString() << ")\n";
     std::cout << std::string(70, '=') << "\n";
-    
+
     topology.PrintDatabase();
-    
+
     // Print direct neighbors
     std::vector<uint16_t> neighbors = topology.GetDirectNeighbors();
     std::cout << "\nDirect Neighbors from Local LSA: ";
@@ -74,7 +74,7 @@ void Router::PrintTopologyDatabase() const {
         }
         std::cout << "\n";
     }
-    
+
     // Print known neighbors from neighbor tracking
     const auto& knownNeighbors = topology.GetNeighbors();
     std::cout << "\nKnown Neighbors (from LSAs received): ";
@@ -86,7 +86,7 @@ void Router::PrintTopologyDatabase() const {
         }
         std::cout << "\n";
     }
-    
+
     std::cout << std::string(70, '=') << "\n";
 }
 
@@ -94,9 +94,9 @@ void Router::PrintLSDBStatistics() const {
     std::cout << "\n" << std::string(70, '=') << "\n";
     std::cout << "LSDB STATISTICS FOR ROUTER " << Data.Id << " (" << Data.Address.ToString() << ")\n";
     std::cout << std::string(70, '=') << "\n";
-    
+
     topology.PrintStatistics();
-    
+
     // Additional router-specific information
     std::cout << "\nRouter Information:\n";
     std::cout << "  Router ID: " << Data.Id << "\n";
@@ -105,25 +105,28 @@ void Router::PrintLSDBStatistics() const {
     std::cout << "  Number of Edges: " << Data.Edges.size() << "\n";
     std::cout << "  Message Queue Size: " << Data.MessageQueue.size() << "\n";
     std::cout << "  Total LSAs in Database: " << topology.GetLSACount() << "\n";
-    
+
     std::cout << std::string(70, '=') << "\n";
 }
 
 void Router::NodeClicked() {
+    topology.SyncWithNeighbors(); // Trigger a sync with neighbors on click
+
     std::cout << "\n╔════════════════════════════════════════════════════════════════════╗\n";
     std::cout << "║                    ROUTER CLICK EVENT                               ║\n";
     std::cout << "╚════════════════════════════════════════════════════════════════════╝\n";
-    
+
     // Basic router information
     std::cout << "Router ID: " << Data.Id << "\n";
     std::cout << "Router Address: " << Data.Address.ToString() << "\n";
     std::cout << "Router Type: " << Data.Type << "\n";
     std::cout << "Connected Edges: " << Data.Edges.size() << "\n";
     std::cout << "Message Queue Size: " << Data.MessageQueue.size() << "\n";
-    
+
     // Print LSDB state
     PrintTopologyDatabase();
-    
+
     // Print LSDB statistics
     PrintLSDBStatistics();
+
 }

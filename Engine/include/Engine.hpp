@@ -22,6 +22,7 @@ class Engine{
     NodeNetwork nodes;
 
     std::unordered_map<std::string, std::function<std::unique_ptr<INode>(Vec2 position)>> NodeFactory;
+    std::vector<std::function<void()>> UpdateFunctions;
 
     InputBlock inputBlock;
 
@@ -64,6 +65,8 @@ public:
     static void Loop();
     static void LoadBackground(const Background background);
     static void RegisterNodeType(const std::string& typeName, std::function<std::unique_ptr<INode>(Vec2 position)> factoryFunction);
+    static void RegisterUpdateFunction(std::function<void()> updateFunction);
+    static INode* GetSelectedNode();
 };
 
 #endif // ENGINE_HPP

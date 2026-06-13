@@ -1,6 +1,8 @@
 #include <Engine.hpp>
 #include <EngineTypes.hpp>
 #include <functional>
+#include "AutoSyncManager.hpp"
+#include "Node.hpp"
 #include "Router.hpp"
 
 int main() {
@@ -29,6 +31,16 @@ int main() {
     Engine::RegisterNodeType("Router", [](Vec2 position) {
         return std::make_unique<Router>(position);
     });
+
+    /*Engine::RegisterUpdateFunction({
+        [&]() {
+            auto selectedNode = Engine::GetSelectedNode();
+            if (selectedNode && dynamic_cast<Router*>(selectedNode)) {
+                AutoSyncManager::SetTarget(dynamic_cast<Router*>(selectedNode));
+            }
+            AutoSyncManager::Update(env.DeltaTime);
+        }
+    });*/
     Engine::Loop();
     return 0;
 }

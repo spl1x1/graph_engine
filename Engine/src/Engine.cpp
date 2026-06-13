@@ -1,5 +1,6 @@
 #include <cassert>
 #include <cmath>
+#include <cstddef>
 #include <iostream>
 #include <ranges>
 #include <string>
@@ -129,10 +130,17 @@ void Engine::Init(Enviroment *env, SandboxData *sandboxData) {
 }
 
 void Engine::Loop() {
+    auto CallUpdateFunctions = []() {
+        for (const auto& func: instance->UpdateFunctions) {
+            func();
+        }
+    };
+
     assert(instance != nullptr && "Engine must be initialized before calling Loop");
     while (!WindowShouldClose()) {
         ProcessInput();
         Widget::EndDrawing();
+        CallUpdateFunctions();
         BeginDrawing();
         DrawSandbox();
         ClearBackground(RAYWHITE);
@@ -506,4 +514,13 @@ void Engine::RegisterNodeType(const std::string &typeName, std::function<std::un
         }
     };
     Widget::Register(typeName, std::make_unique<Button>(data, buttonData));
+}
+
+void Engine::RegisterUpdateFunction(std::function<void()> func) {
+    instance->UpdateFunctions.push_back(func);
+}
+
+INode* Engine::GetSelectedNode(){
+    if (!instance) return nullptr;
+    return instance->nodes.GetSelectedNode();
 }

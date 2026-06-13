@@ -139,6 +139,10 @@ public:
     INode& operator=(const INode&) = default;
 };
 
+struct SelectedNodes{
+    uint16_t NodeA{0};
+    uint16_t NodeB{0};
+};
 
 class NodeNetwork{
     std::map<uint16_t, std::unique_ptr<INode>> nodes{};
@@ -150,10 +154,7 @@ class NodeNetwork{
     uint16_t nodeIdCounter{1};
     uint16_t edgeIdCounter{1};
 
-    struct SelectedNodes{
-        uint16_t NodeA{0};
-        uint16_t NodeB{0};
-    } selectedNodes;
+    SelectedNodes selectedNodes;
 
 public:
     void AddNode(std::unique_ptr<INode> node, IPAddress networkArea = IPAddress{});
@@ -187,6 +188,7 @@ public:
 
     void ClearSelectedNodes();
     void ClearEdgesFromSelectedNode();
+    INode* GetSelectedNode() const;
 };
 
 

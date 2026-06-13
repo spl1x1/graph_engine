@@ -1,3 +1,4 @@
+#include "EngineTypes.hpp"
 #include <Node.hpp>
 #include <cstddef>
 #include <cstdint>
@@ -288,4 +289,8 @@ std::vector<INode*> NodeNetwork::GetArea(const IPAddress address) const {
             result.push_back(node.get());
 
     return result;
+}
+
+INode* NodeNetwork::GetSelectedNode() const {
+    return nodes.find(selectedNodes.NodeA) != nodes.end() ? nodes.at(selectedNodes.NodeA).get() : nullptr;
 }
