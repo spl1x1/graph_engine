@@ -3,9 +3,9 @@
 #include <functional>
 #include "Router.hpp"
 
-int main() {
-    constexpr int windowWidth = 1200;
-    constexpr int windowHeight = 960;
+int main(int argc, char *argv[]) {
+    constexpr int windowWidth = 860;
+    constexpr int windowHeight = 640;
 
     constexpr int sandboxWidth = 2000;
     constexpr int sandboxHeight = 2000;
@@ -29,6 +29,10 @@ int main() {
     Engine::RegisterNodeType("Router", [](Vec2 position) {
         return std::make_unique<Router>(position);
     });
+
+    std::string saveFile{argc > 1 ? argv[1] : ""};
+    Engine::InitSave(saveFile);
+
     Engine::Loop();
     return 0;
 }

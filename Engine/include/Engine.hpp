@@ -29,6 +29,7 @@ class Engine{
     void DrawEdge(Edge& edge);
     void DrawNode(INode& node);
     void DrawUI();
+    void DrawMenuGUI();
 
     void DrawNodes();
     void DrawEdges();
@@ -60,6 +61,7 @@ class Engine{
 public:
     // Static method to initialize the engine
     static void Init(Enviroment *env, SandboxData *sandboxData);
+    static void InitSave(const std::string& saveFile = "");
     // Static method to start the main loop
     static void Loop();
     static void LoadBackground(const Background background);

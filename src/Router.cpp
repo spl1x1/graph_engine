@@ -37,5 +37,5 @@ NodeData& Router::GetData(){
 }
 
 void Router::NodeClicked() {
-    std::cout << "Router " << Data.Id << " " << Data.Address.ToString()  << " clicked. Message queue size: " << Data.MessageQueue.size() << std::endl;
+    std::cout << "Router " << Data.Id << " " << Data.Address.ToString()  << " clicked. Message queue size: " << Data.MessageQueue.size() << " Node type: " << Data.Type << "\n";
 };
