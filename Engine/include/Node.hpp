@@ -141,6 +141,7 @@ public:
     virtual NodeData& GetData() = 0;
     virtual void NodeClicked() = 0;
     virtual void OnEdgeAdded(INode* neighbor, const Edge& edge) {}
+    virtual void OnEdgeRemoved(INode* neighbor, const Edge& edge) {}
 
 
     virtual ~INode() = default;

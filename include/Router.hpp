@@ -24,6 +24,7 @@ public:
     virtual NodeData& GetData() override;
     virtual void NodeClicked() override;
     virtual void OnEdgeAdded(INode* neighbor, const Edge& edge) override;
+    virtual void OnEdgeRemoved(INode* neighbor, const Edge& edge) override;
     
     // LSDB-related methods
     LSDB& GetLSDB();
