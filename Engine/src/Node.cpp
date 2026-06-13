@@ -32,6 +32,10 @@ Vec2 NodePosition::TransformPosition(const Vec2 Camera) const{
 void BasicNodeOperations::SendMessage(Message message, class NodeNetwork& nodes) {
     auto senderNode{nodes.GetNode(message.SenderAddress)};
     auto receiverNode{nodes.GetNode(message.ReceiverAddress)};
+    if (senderNode == nullptr || receiverNode == nullptr) {
+        std::cerr << "Message send failed: sender or receiver node not found by IP address.\n";
+        return;
+    }
 
     auto it = std::find(senderNode->GetData().Edges.begin(), senderNode->GetData().Edges.end(), receiverNode->GetData().Id);
     if (it == senderNode->GetData().Edges.end()) {
@@ -40,6 +44,7 @@ void BasicNodeOperations::SendMessage(Message message, class NodeNetwork& nodes)
     };
 
     nodes.GetEdge(*it)->Active = true;
+    senderNode->GetData().FlashTimer = 0.25f;
     nodes.GetNode(message.ReceiverAddress)->PushMessage(message);
 }
 
@@ -124,6 +129,7 @@ void NodeNetwork::AddNode(std::unique_ptr<INode> node, IPAddress networkArea) {
 
     node->UpdateNodeData(data);
     nodes.insert_or_assign(nodeIdCounter, std::move(node));
+    ipAddressMap.insert_or_assign(data.Address.ToString(), data.Id);
 
     nodeIdCounter++;
 };
@@ -131,6 +137,7 @@ void NodeNetwork::AddNode(std::unique_ptr<INode> node, IPAddress networkArea) {
 void NodeNetwork::RemoveNode(const uint16_t id){
     if (!nodes.contains(id)) return;
 
+    ipAddressMap.erase(nodes.at(id)->GetData().Address.ToString());
     std::vector<uint16_t> edgesToRemove = GetNode(id)->GetData().Edges;
 
     for (const auto& edgeId : edgesToRemove)
@@ -244,6 +251,13 @@ bool NodeNetwork::ProcessNodeClick(const Vec2 MousePos, Event::Click clickEvent)
         ClearSelectedNodes();
         }
     }
+    else if (clickEvent == Event::Click::SEND_MESSAGE){
+        selectedNodes = UpdateNodeSelection();
+        if (selectedNodes.NodeA != 0 && selectedNodes.NodeB != 0) {
+            pendingMessageSelection = selectedNodes;
+            ClearSelectedNodes();
+        }
+    }
     //Pridat vektor pro ukládání dvou kliknutých uzlů pro přidání hrany
     return true;
 }
@@ -298,4 +312,22 @@ std::vector<INode*> NodeNetwork::GetArea(const IPAddress address) const {
 
 INode* NodeNetwork::GetSelectedNode() const {
     return nodes.find(selectedNodes.NodeA) != nodes.end() ? nodes.at(selectedNodes.NodeA).get() : nullptr;
+}
+
+std::optional<SelectedNodes> NodeNetwork::ConsumeMessageSelection() {
+    if (!pendingMessageSelection.has_value()) return std::nullopt;
+    auto selection = pendingMessageSelection;
+    pendingMessageSelection.reset();
+    return selection;
+}
+
+void NodeNetwork::FlashEdgeBetween(uint16_t nodeA, uint16_t nodeB, float durationSeconds) {
+    for (auto& [edgeId, edge] : edges) {
+        const bool sameDirection = edge.Key.NodeA == nodeA && edge.Key.NodeB == nodeB;
+        const bool oppositeDirection = edge.Key.NodeA == nodeB && edge.Key.NodeB == nodeA;
+        if (sameDirection || oppositeDirection) {
+            edge.RouteFlashTimer = std::max(edge.RouteFlashTimer, durationSeconds);
+            return;
+        }
+    }
 }

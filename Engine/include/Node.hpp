@@ -3,6 +3,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <queue>
 #include <unordered_map>
 #include <vector>
@@ -54,6 +55,7 @@ public:
     } Key;
 
     bool Active{false};
+    float RouteFlashTimer{0.0f};
 
     Edge(EdgeKey key, LinkSpeed speed = LinkSpeed::MEDIUM);
     double GetWeight() const;
@@ -78,6 +80,7 @@ struct Message{
 #define ClickEvents \
         ENTRY(REMOVE) \
         ENTRY(ADD_EDGE) \
+        ENTRY(SEND_MESSAGE) \
         ENTRY(NONE)
 
 struct Event{
@@ -110,6 +113,9 @@ struct NodeData{
   std::vector<uint16_t> Edges{};
   std::queue<Message> MessageQueue{};
   Message currentMessage;
+  float FlashTimer{0.0f};
+  std::string LastDeliveredMessage{};
+  float DeliveredMessageTimer{0.0f};
   class NodeNetwork* Network{nullptr}; // Pointer to the network the node is in, used for sending messages
 };
 
@@ -158,6 +164,7 @@ class NodeNetwork{
     uint16_t edgeIdCounter{1};
 
     SelectedNodes selectedNodes;
+    std::optional<SelectedNodes> pendingMessageSelection;
 
 public:
     void AddNode(std::unique_ptr<INode> node, IPAddress networkArea = IPAddress{});
@@ -192,6 +199,8 @@ public:
     void ClearSelectedNodes();
     void ClearEdgesFromSelectedNode();
     INode* GetSelectedNode() const;
+    std::optional<SelectedNodes> ConsumeMessageSelection();
+    void FlashEdgeBetween(uint16_t nodeA, uint16_t nodeB, float durationSeconds = 0.3f);
 };
 
 
