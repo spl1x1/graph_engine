@@ -1,6 +1,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstddef>
+#include <format>
 #include <iostream>
 #include <ranges>
 #include <string>
@@ -58,7 +59,7 @@ void Engine::Init(Enviroment *env, SandboxData *sandboxData) {
     }
 
     instance = std::unique_ptr<Engine>(new Engine(env, sandboxData));
-    LoadBackground(env->Background);
+    LoadBackground(env->Bg);
     std::cout << "Engine initialized" << "\n";
 
 
@@ -166,7 +167,7 @@ void Engine::LoadBackground(Background background) {
         background.Height = instance->backgroundTexture.height;
     }
 
-    instance->env->Background = background;
+    instance->env->Bg = background;
 
     std::cout << "Loading background texture... \n";
 }
@@ -178,8 +179,8 @@ void Engine::DrawBackground() {
     }
 
     const float zoom = instance->sandboxData->Zoom;
-    const float tileW = static_cast<float>(instance->env->Background.Width) * zoom;
-    const float tileH = static_cast<float>(instance->env->Background.Height) * zoom;
+    const float tileW = static_cast<float>(instance->env->Bg.Width) * zoom;
+    const float tileH = static_cast<float>(instance->env->Bg.Height) * zoom;
 
     float offsetX = std::fmod(instance->sandboxData->Camera[0] * zoom, tileW);
     float offsetY = std::fmod(instance->sandboxData->Camera[1] * zoom, tileH);
@@ -447,18 +448,32 @@ void Engine::DrawUI() {
     if (instance->sandboxData->Edit.Enabled) DrawEditData();
     else DrawText("Press E to enter edit mode | Press R to clear selected", 10, 100, 20, GREEN);
     Widget::Draw("ClearButton");
+    Widget::Draw("SyncButton");
 }
 
 void Engine::DrawNode(INode& node) {
     const auto NodeScreenPos{node.GetScreenPosition(instance->sandboxData->Camera)};
     const auto zoom {instance->sandboxData->Zoom};
-    const auto id {node.GetData().Id};
+    auto& nodeData = node.GetData();
+    const auto id {nodeData.Id};
 
-    const auto isConnected = !node.GetData().Edges.empty();
+    const auto isConnected = !nodeData.Edges.empty();
     const auto baseColor = isConnected ? GREEN : RED;
-    const auto color{nodes.IsNodeSelected(id) ? ORANGE : baseColor};
+    Color color = nodes.IsNodeSelected(id) ? ORANGE : baseColor;
+    if (nodeData.FlashTimer > 0.0f) {
+        color = SKYBLUE;
+        nodeData.FlashTimer = std::max(0.0f, nodeData.FlashTimer - instance->env->DeltaTime);
+    }
 
     DrawCircle(NodeScreenPos[0] * zoom, NodeScreenPos[1] * zoom, node.GetRadius() * zoom, color);
+    if (nodeData.DeliveredMessageTimer > 0.0f && !nodeData.LastDeliveredMessage.empty()) {
+        DrawText(nodeData.LastDeliveredMessage.c_str(),
+            NodeScreenPos[0] * zoom - 30,
+            NodeScreenPos[1] * zoom + 25,
+            16,
+            YELLOW);
+        nodeData.DeliveredMessageTimer = std::max(0.0f, nodeData.DeliveredMessageTimer - instance->env->DeltaTime);
+    }
 }
 
 void Engine::DrawEdge(Edge& edge) {
@@ -472,7 +487,13 @@ void Engine::DrawEdge(Edge& edge) {
     const auto zoom = instance->sandboxData->Zoom;
 
     const auto areaColor = fromNode->GetData().Address.compareArea(toNode->GetData().Address) ? GREEN : BLUE;
-    const auto color = (edge.Active == true ? YELLOW : areaColor);
+    Color color = areaColor;
+    if (edge.RouteFlashTimer > 0.0f) {
+        color = MAGENTA;
+        edge.RouteFlashTimer = std::max(0.0f, edge.RouteFlashTimer - instance->env->DeltaTime);
+    } else if (edge.Active == true) {
+        color = YELLOW;
+    }
     edge.Active = false;
 
     const Vector2 fromScreen{fromPos[0] * zoom, fromPos[1] * zoom};
@@ -523,4 +544,23 @@ void Engine::RegisterUpdateFunction(std::function<void()> func) {
 INode* Engine::GetSelectedNode(){
     if (!instance) return nullptr;
     return instance->nodes.GetSelectedNode();
+}
+
+std::vector<INode*> Engine::GetAllNodes() {
+    std::vector<INode*> result;
+    if (!instance) return result;
+    for (const auto& [id, node] : instance->nodes.GetNodeMap()) {
+        if (node) result.push_back(node.get());
+    }
+    return result;
+}
+
+std::optional<SelectedNodes> Engine::ConsumeMessageSelection() {
+    if (!instance) return std::nullopt;
+    return instance->nodes.ConsumeMessageSelection();
+}
+
+void Engine::FlashEdgeBetween(uint16_t nodeA, uint16_t nodeB, float durationSeconds) {
+    if (!instance) return;
+    instance->nodes.FlashEdgeBetween(nodeA, nodeB, durationSeconds);
 }

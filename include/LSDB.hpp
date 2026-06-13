@@ -186,6 +186,7 @@ public:
      * @return Vector of link state entries leading to destination
      */
     std::vector<LinkStateEntry> GetLinksToDestination(uint16_t destinationId) const;
+    std::vector<uint16_t> GetShortestPath(uint16_t sourceRouterId, uint16_t destinationRouterId) const;
     
     /**
      * @brief Get all directly connected neighbors

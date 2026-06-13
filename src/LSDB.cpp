@@ -3,6 +3,8 @@
 #include <numeric>
 #include <cstring>
 #include <iomanip>
+#include <limits>
+#include <queue>
 
 // ==================== LinkStateAdvertisement Implementation ====================
 
@@ -257,6 +259,64 @@ std::vector<LinkStateEntry> LSDB::GetLinksToDestination(uint16_t destinationId) 
     }
     
     return result;
+}
+
+std::vector<uint16_t> LSDB::GetShortestPath(uint16_t sourceRouterId, uint16_t destinationRouterId) const {
+    if (sourceRouterId == 0 || destinationRouterId == 0) return {};
+    if (sourceRouterId == destinationRouterId) return {sourceRouterId};
+
+    std::map<uint16_t, std::vector<std::pair<uint16_t, double>>> adjacency;
+    for (const auto& [routerId, lsa] : database) {
+        for (const auto& link : lsa.GetLinks()) {
+            if (!link.LinkActive) continue;
+            adjacency[link.SourceNodeId].push_back({link.DestinationNodeId, link.LinkCost});
+            adjacency[link.DestinationNodeId].push_back({link.SourceNodeId, link.LinkCost});
+        }
+    }
+
+    if (!adjacency.contains(sourceRouterId) || !adjacency.contains(destinationRouterId)) return {};
+
+    std::map<uint16_t, double> distance;
+    std::map<uint16_t, uint16_t> previous;
+    for (const auto& [nodeId, _] : adjacency) {
+        distance[nodeId] = std::numeric_limits<double>::infinity();
+    }
+    distance[sourceRouterId] = 0.0;
+
+    using QueueItem = std::pair<double, uint16_t>;
+    std::priority_queue<QueueItem, std::vector<QueueItem>, std::greater<>> pq;
+    pq.push({0.0, sourceRouterId});
+
+    while (!pq.empty()) {
+        const auto [currentDist, current] = pq.top();
+        pq.pop();
+        if (currentDist > distance[current]) continue;
+        if (current == destinationRouterId) break;
+
+        for (const auto& [neighbor, weight] : adjacency[current]) {
+            const auto newDist = currentDist + weight;
+            if (newDist < distance[neighbor]) {
+                distance[neighbor] = newDist;
+                previous[neighbor] = current;
+                pq.push({newDist, neighbor});
+            }
+        }
+    }
+
+    if (!distance.contains(destinationRouterId) ||
+        distance[destinationRouterId] == std::numeric_limits<double>::infinity()) {
+        return {};
+    }
+
+    std::vector<uint16_t> path;
+    for (uint16_t at = destinationRouterId; at != 0;) {
+        path.push_back(at);
+        if (at == sourceRouterId) break;
+        if (!previous.contains(at)) return {};
+        at = previous[at];
+    }
+    std::reverse(path.begin(), path.end());
+    return path;
 }
 
 std::vector<uint16_t> LSDB::GetDirectNeighbors() const {

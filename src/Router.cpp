@@ -110,7 +110,6 @@ void Router::PrintLSDBStatistics() const {
 }
 
 void Router::NodeClicked() {
-    topology.SyncWithNeighbors(); // Trigger a sync with neighbors on click
 
     std::cout << "\n╔════════════════════════════════════════════════════════════════════╗\n";
     std::cout << "║                    ROUTER CLICK EVENT                               ║\n";
@@ -129,4 +128,73 @@ void Router::NodeClicked() {
     // Print LSDB statistics
     PrintLSDBStatistics();
 
+}
+
+void Router::OnEdgeAdded(INode* neighbor, const Edge& edge) {
+    if (Data.Id == 0 || neighbor == nullptr) return;
+
+    // Build a LinkStateEntry for this new connection
+    LinkStateEntry entry;
+    entry.LinkId = edge.Key.Id;
+    entry.SourceNodeId = Data.Id;
+    entry.DestinationNodeId = neighbor->GetData().Id;
+    entry.SourceAddress = Data.Address;
+    entry.DestinationAddress = neighbor->GetData().Address;
+    entry.LinkCost = edge.GetWeight();
+    entry.LinkActive = true;
+    entry.Speed = edge.Speed;
+
+    // Get existing local LSA or start a fresh one
+    const LinkStateAdvertisement* existing = topology.GetLSA(Data.Id);
+    LinkStateAdvertisement updatedLSA = existing ? *existing : LinkStateAdvertisement(Data.Id);
+
+    updatedLSA.AddLink(entry);
+    updatedLSA.IncrementSequenceNumber();
+    updatedLSA.ResetAge();
+    updatedLSA.CalculateChecksum();
+
+    topology.AddOrUpdateLSA(updatedLSA);
+    topology.AddNeighbor(neighbor->GetData().Id);
+
+    std::cout << "🔗 Router " << Data.Id << " registered new link to Router "
+              << neighbor->GetData().Id << " (edge " << edge.Key.Id << ")\n";
+
+    // Flood own LSA to all known neighbors
+    SyncWithNetwork();
+}
+
+uint32_t Router::SyncWithNetwork() {
+    if (Data.Network == nullptr) return 0;
+
+    const auto& allLSAs = topology.GetAllLSAs();
+    if (allLSAs.empty()) {
+        std::cout << "Router " << Data.Id << ": no LSAs to flood\n";
+        return 0;
+    }
+
+    const auto& neighbors = topology.GetNeighbors();
+    uint32_t flooded = 0;
+
+    std::cout << "\n" << std::string(70, '=') << "\n";
+    std::cout << "📡 FLOOD - Router " << Data.Id << " → " << neighbors.size() << " neighbor(s)\n";
+    std::cout << std::string(70, '=') << "\n";
+
+    for (uint16_t neighborId : neighbors) {
+        if (neighborId == Data.Id) continue;
+        INode* neighborNode = Data.Network->GetNode(neighborId);
+        if (auto* neighborRouter = dynamic_cast<Router*>(neighborNode)) {
+            for (const auto& [routerId, lsa] : allLSAs) {
+                if (neighborRouter->GetLSDB().AddOrUpdateLSA(lsa)) {
+                    neighborRouter->GetLSDB().AddNeighbor(Data.Id);
+                    std::cout << "   → Flooded LSA (router=" << routerId << ", seq=" << lsa.GetSequenceNumber()
+                              << ") to Router " << neighborId << "\n";
+                    flooded++;
+                }
+            }
+        }
+    }
+
+    std::cout << "✓ Flooded " << flooded << " LSA(s) to " << neighbors.size() << " neighbor(s)\n";
+    std::cout << std::string(70, '=') << "\n\n";
+    return flooded;
 }
