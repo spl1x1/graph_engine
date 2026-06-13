@@ -1,5 +1,6 @@
 #include "Widget.hpp"
 #include "raylib.h"
+#include <algorithm>
 #include <iostream>
 #include <ranges>
 #include <vector>

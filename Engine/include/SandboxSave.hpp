@@ -1,14 +1,16 @@
 #ifndef SANDBOXSAVE_HPP
 #define SANDBOXSAVE_HPP
 
+#include <functional>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <Node.hpp>
 #include <EngineTypes.hpp>
 
 struct SandboxVariablePointers{
     NodeNetwork* Network;
-    SandboxData* SandboxData;
+    SandboxData* Sandbox;
     std::unordered_map<std::string, std::function<std::unique_ptr<INode>(Vec2 position)>>* NodeFactory;
 };
 

@@ -35,7 +35,7 @@ struct Background{
 };
 
 struct Enviroment{
-    Background Background;
+    Background Bg;
     EnvWindow Window;
     EnvSandbox Sandbox;
 
@@ -91,4 +91,7 @@ struct SandboxData{
     bool TextInputActive{false};
     bool ShowSpeed{false};
 };
+
+
+
 #endif // ENGINE_TYPES_HPP

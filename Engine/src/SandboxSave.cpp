@@ -1,12 +1,13 @@
 #include <SandboxSave.hpp>
-#include <fstream>
-#include <rapidjson.h>
-#include <document.h>
-#include <iostream>
+#include <cassert>
 #include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <document.h>
+#include <istreamwrapper.h>
+#include <rapidjson.h>
 #include <stringbuffer.h>
 #include <writer.h>
-#include <istreamwrapper.h>
 
 std::unique_ptr<SandboxSave> SandboxSave::instance = std::make_unique<SandboxSave>();
 
@@ -18,18 +19,16 @@ void SandboxSave::SetPointers(SandboxVariablePointers pointers) {
 
 void SandboxSave::Init(std::string saveFile, SandboxVariablePointers pointers) {
     instance->pointers = pointers;
-    // Load the save file and populate the sandbox with the saved data
-    if (saveFile.empty()) { //Default save branch
+    if (saveFile.empty()) {
         saveFile = "save.json";
-        return;
-    };
+    }
 
     instance->saveFile = saveFile;
     auto currentPath = std::filesystem::path(saveFile);
-    if (!std::filesystem::exists(currentPath)){
-        std::fstream(saveFile,std::ios::out | std::ios::trunc).close();
+    if (!std::filesystem::exists(currentPath)) {
+        std::fstream(saveFile, std::ios::out | std::ios::trunc).close();
         return;
-        }; // Create the file if it doesn't exist
+    }
 
     instance->Load();
 }
@@ -40,7 +39,7 @@ void SandboxSave::Save() {
     //Dev assert crashne program při nullptr
 
     //Prod return early if nullptr, to prevent crashing in release build, but still catch the error in debug
-    if (instance->pointers.Network == nullptr || instance->pointers.SandboxData == nullptr) {
+    if (instance->pointers.Network == nullptr || instance->pointers.Sandbox == nullptr) {
         std::cerr << "Error: SandboxSave pointers not set. Save aborted." << std::endl;
         return;
     }
@@ -49,7 +48,7 @@ void SandboxSave::Save() {
     document.SetObject();
     Document::AllocatorType& allocator = document.GetAllocator();
     auto data{instance->pointers};
-    auto cameraPointer{data.SandboxData->Camera};
+    auto cameraPointer{data.Sandbox->Camera};
 
     document.AddMember("CameraX", cameraPointer[0], allocator);
     document.AddMember("CameraY", cameraPointer[1], allocator);
@@ -91,7 +90,7 @@ void SandboxSave::Load() {
     //Dev assert crashne program při nullptr
 
     //Prod return early if nullptr, to prevent crashing in release build, but still catch the error in debug
-    if (instance->pointers.Network == nullptr || instance->pointers.SandboxData == nullptr) {
+    if (instance->pointers.Network == nullptr || instance->pointers.Sandbox == nullptr) {
         std::cerr << "Error: SandboxSave pointers not set. Save aborted." << std::endl;
         return;
     }
@@ -111,8 +110,8 @@ void SandboxSave::Load() {
     auto data{instance->pointers};
 
     //Set camera position
-    data.SandboxData->Camera[0] = document["CameraX"].GetFloat();
-    data.SandboxData->Camera[1] = document["CameraY"].GetFloat();
+    data.Sandbox->Camera[0] = document["CameraX"].GetFloat();
+    data.Sandbox->Camera[1] = document["CameraY"].GetFloat();
 
     //Load nodes
     const auto& nodes = document["Nodes"].GetObject();

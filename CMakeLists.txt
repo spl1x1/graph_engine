@@ -50,7 +50,7 @@ target_include_directories(RapidJSON INTERFACE
 
 add_executable(EngineExecutable
   ${EXECUTABLE_FILES}
-  ${EXECUTABLEHEADERS}
+  ${EXECUTABLE_HEADERS}
 )
 
 
@@ -76,15 +76,13 @@ target_link_libraries(EngineLib
     RapidJSON
 )
 
-include_directories(
-  EngineLib
+target_include_directories(EngineLib
   PUBLIC
   "${CMAKE_CURRENT_SOURCE_DIR}/Engine/include"
 )
 
-include_directories(
-  EngineExecutable
-  PUBLIC
+target_include_directories(EngineExecutable
+  PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 

@@ -6,6 +6,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <raylib.h>
 #include <unordered_map>
 
@@ -22,6 +23,7 @@ class Engine{
     NodeNetwork nodes;
 
     std::unordered_map<std::string, std::function<std::unique_ptr<INode>(Vec2 position)>> NodeFactory;
+    std::vector<std::function<void()>> UpdateFunctions;
 
     InputBlock inputBlock;
 
@@ -66,6 +68,11 @@ public:
     static void Loop();
     static void LoadBackground(const Background background);
     static void RegisterNodeType(const std::string& typeName, std::function<std::unique_ptr<INode>(Vec2 position)> factoryFunction);
+    static void RegisterUpdateFunction(std::function<void()> updateFunction);
+    static INode* GetSelectedNode();
+    static std::vector<INode*> GetAllNodes();
+    static std::optional<SelectedNodes> ConsumeMessageSelection();
+    static void FlashEdgeBetween(uint16_t nodeA, uint16_t nodeB, float durationSeconds = 0.3f);
 };
 
 #endif // ENGINE_HPP

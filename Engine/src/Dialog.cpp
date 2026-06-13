@@ -6,7 +6,7 @@ Dialog::Dialog(WidgetData data, DialogData dialogInfo): Widget(data), DialogInfo
 }
 
 void Dialog::Draw() {
-    const auto color {Data.Border.Color};
+    const auto color {Data.Border.BorderColor};
     DrawBorder(color);
     DrawText(DialogInfo.Title.c_str(), Data.PosX + 10, Data.PosY + 10, 20, color);
 

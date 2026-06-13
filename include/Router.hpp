@@ -3,10 +3,12 @@
 
 #include "Node.hpp"
 #include "Vector.hpp"
+#include "LSDB.hpp"
 
 class Router: public INode{
     NodePosition Position;
     NodeData Data;
+    LSDB topology;  // Composed LSDB for topology management
 
 public:
     Router(Vec2 Position) : Position{Position}, Data{.Id = 0, .Type = "Router"} {};
@@ -21,6 +23,15 @@ public:
     virtual void PushMessage(Message message) override;
     virtual NodeData& GetData() override;
     virtual void NodeClicked() override;
+    virtual void OnEdgeAdded(INode* neighbor, const Edge& edge) override;
+    
+    // LSDB-related methods
+    LSDB& GetLSDB();
+    const LSDB& GetLSDB() const;
+    void InitializeLSDB();
+    void PrintTopologyDatabase() const;
+    void PrintLSDBStatistics() const;
+    uint32_t SyncWithNetwork();
 };
 
 

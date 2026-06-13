@@ -1,6 +1,7 @@
 #ifndef WIDGET_HPP
 #define WIDGET_HPP
 
+#include <memory>
 #include <queue>
 #include <string>
 #include <unordered_map>
@@ -9,7 +10,7 @@
 
 struct BorderData{
     float Thickness;
-    Color Color;
+    Color BorderColor;
     bool Enabled{true};
 };
 
