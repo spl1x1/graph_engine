@@ -1,9 +1,12 @@
 #include <Engine.hpp>
 #include <EngineTypes.hpp>
 #include <functional>
+#include <iostream>
 #include "AutoSyncManager.hpp"
 #include "Node.hpp"
 #include "Router.hpp"
+#include <Button.hpp>
+#include <Widget.hpp>
 
 int main() {
     constexpr int windowWidth = 1200;
@@ -16,7 +19,7 @@ int main() {
     constexpr float sandboxCenterY = sandboxHeight / 2.f - windowHeight / 2.f;
 
     Enviroment env = {
-        .Background = {"assets/nebula_background.png"},
+        .Bg = {"assets/nebula_background.png"},
         .Window = {windowWidth, windowHeight, 60},
         .Sandbox = {sandboxWidth, sandboxHeight},
         .Title = "Graph Engine",
@@ -31,6 +34,32 @@ int main() {
     Engine::RegisterNodeType("Router", [](Vec2 position) {
         return std::make_unique<Router>(position);
     });
+
+    // Register Sync LSDB button – floods LSAs to all neighbors of the selected router
+    WidgetData syncWidgetData{
+        .PosX = 170.0f,
+        .PosY = 130.0f,
+        .Width = 120.0f,
+        .Height = 20.0f,
+        .Border = {0.0f, WHITE}
+    };
+    ButtonData syncButtonData{
+        .HoverColor = LIGHTGRAY,
+        .Text = "Sync LSDB",
+        .OnClick = [](){
+            INode* selected = Engine::GetSelectedNode();
+            if (selected) {
+                if (auto* router = dynamic_cast<Router*>(selected)) {
+                    router->GetLSDB().SyncWithNeighbors();
+                } else {
+                    std::cout << "Selected node is not a Router\n";
+                }
+            } else {
+                std::cout << "No router selected. Click a router first.\n";
+            }
+        }
+    };
+    Widget::Register("SyncButton", std::make_unique<Button>(syncWidgetData, syncButtonData));
 
     /*Engine::RegisterUpdateFunction({
         [&]() {

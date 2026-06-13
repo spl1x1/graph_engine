@@ -1,5 +1,6 @@
 #include "EngineTypes.hpp"
 #include <Node.hpp>
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <memory>

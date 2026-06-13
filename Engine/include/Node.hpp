@@ -2,7 +2,9 @@
 #define NODE_HPP
 
 #include <map>
+#include <memory>
 #include <queue>
+#include <unordered_map>
 #include <vector>
 #include <cstdint>
 #include <Vector.hpp>

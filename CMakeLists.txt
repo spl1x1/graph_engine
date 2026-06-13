@@ -39,7 +39,7 @@ add_library(EngineLib STATIC
 
 add_executable(EngineExecutable
   ${EXECUTABLE_FILES}
-  ${EXECUTABLEHEADERS}
+  ${EXECUTABLE_HEADERS}
 )
 
 # CPM - CMake Package Manager
@@ -61,15 +61,13 @@ target_link_libraries(EngineLib
     PUBLIC raylib
 )
 
-include_directories(
-  EngineLib
+target_include_directories(EngineLib
   PUBLIC
   "${CMAKE_CURRENT_SOURCE_DIR}/Engine/include"
 )
 
-include_directories(
-  EngineExecutable
-  PUBLIC
+target_include_directories(EngineExecutable
+  PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 

@@ -58,7 +58,7 @@ void Engine::Init(Enviroment *env, SandboxData *sandboxData) {
     }
 
     instance = std::unique_ptr<Engine>(new Engine(env, sandboxData));
-    LoadBackground(env->Background);
+    LoadBackground(env->Bg);
     std::cout << "Engine initialized" << "\n";
 
 
@@ -166,7 +166,7 @@ void Engine::LoadBackground(Background background) {
         background.Height = instance->backgroundTexture.height;
     }
 
-    instance->env->Background = background;
+    instance->env->Bg = background;
 
     std::cout << "Loading background texture... \n";
 }
@@ -178,8 +178,8 @@ void Engine::DrawBackground() {
     }
 
     const float zoom = instance->sandboxData->Zoom;
-    const float tileW = static_cast<float>(instance->env->Background.Width) * zoom;
-    const float tileH = static_cast<float>(instance->env->Background.Height) * zoom;
+    const float tileW = static_cast<float>(instance->env->Bg.Width) * zoom;
+    const float tileH = static_cast<float>(instance->env->Bg.Height) * zoom;
 
     float offsetX = std::fmod(instance->sandboxData->Camera[0] * zoom, tileW);
     float offsetY = std::fmod(instance->sandboxData->Camera[1] * zoom, tileH);
@@ -447,6 +447,7 @@ void Engine::DrawUI() {
     if (instance->sandboxData->Edit.Enabled) DrawEditData();
     else DrawText("Press E to enter edit mode | Press R to clear selected", 10, 100, 20, GREEN);
     Widget::Draw("ClearButton");
+    Widget::Draw("SyncButton");
 }
 
 void Engine::DrawNode(INode& node) {

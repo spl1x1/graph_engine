@@ -35,7 +35,7 @@ struct Background{
 };
 
 struct Enviroment{
-    Background Background;
+    Background Bg;
     EnvWindow Window;
     EnvSandbox Sandbox;
 
