@@ -12,338 +12,121 @@
 
 LSA flooding is the mechanism by which routers distribute their Link State Advertisements to neighbors, ensuring all routers have a synchronized view of the network topology. This guide shows how to implement flooding in your LSDB and create a sync button widget to trigger synchronization.
 
-## 1. Adding Flooding Methods to LSDB
+## 1. Flooding Methods in LSDB
 
-### Concepts
+### Available Methods
 
-**Flooding Process:**
-1. A router creates/updates an LSA describing its local links
-2. It floods this LSA to all neighbors
-3. Neighbors check if the LSA is new or updated (using sequence numbers)
-4. If new/updated, neighbors add it to their database and flood to their neighbors
-5. Process continues until all routers have the LSA
-
-### Implementation Steps
-
-#### Step 1: Add Flooding Tracking to LSDB
-
-Add to `LSDB.hpp`:
+The LSDB now includes these flooding-related methods:
 
 ```cpp
-class LSDB {
-private:
-    std::set<uint16_t> lastFloodedLSAs;  // Track which LSAs were recently flooded
-    time_t lastFloodTime{0};
-    
-public:
-    // ... existing methods ...
-    
-    /**
-     * @brief Prepare local LSA from current network links for flooding
-     * @param localLinks Vector of links connected to this router
-     * @return LinkStateAdvertisement ready to flood
-     */
-    LinkStateAdvertisement CreateLocalLSA(const std::vector<LinkStateEntry>& localLinks);
-    
-    /**
-     * @brief Flood an LSA to all neighbors
-     * @param lsa The advertisement to flood
-     * @return Vector of neighbor IDs that received the LSA
-     */
-    std::vector<uint16_t> FloodLSA(const LinkStateAdvertisement& lsa);
-    
-    /**
-     * @brief Get LSAs that haven't been recently flooded
-     * @return Vector of LSAs needing to be flooded
-     */
-    std::vector<LinkStateAdvertisement> GetNewLSAsToFlood() const;
-    
-    /**
-     * @brief Manually trigger a full synchronization with all neighbors
-     * @return Number of LSAs flooded
-     */
-    uint32_t SyncWithNeighbors();
-};
+// Create a local LSA from current network links
+LinkStateAdvertisement CreateLocalLSA(const std::vector<LinkStateEntry>& localLinks);
+
+// Flood an LSA to all neighbors
+std::vector<uint16_t> FloodLSA(const LinkStateAdvertisement& lsa);
+
+// Get LSAs that need to be flooded
+std::vector<LinkStateAdvertisement> GetLSAsToFlood() const;
+std::vector<LinkStateAdvertisement> GetNewLSAsToFlood() const;
+
+// Trigger full synchronization with neighbors
+uint32_t SyncWithNeighbors();
 ```
 
-#### Step 2: Implement Flooding in LSDB.cpp
+## 2. Creating and Using a Sync Button
+
+### Step 1: Add Sync Button to Engine UI
+
+In your Engine initialization (e.g., `DrawUI()` or `DrawMenuGUI()` method):
 
 ```cpp
-LinkStateAdvertisement LSDB::CreateLocalLSA(const std::vector<LinkStateEntry>& localLinks) {
-    LinkStateAdvertisement localLSA(LocalRouterId);
-    
-    for (const auto& link : localLinks) {
-        localLSA.AddLink(link);
-    }
-    
-    localLSA.IncrementSequenceNumber();
-    localLSA.ResetAge();
-    localLSA.CalculateChecksum();
-    
-    return localLSA;
-}
-
-std::vector<uint16_t> LSDB::FloodLSA(const LinkStateAdvertisement& lsa) {
-    std::vector<uint16_t> floodedNeighbors;
-    
-    std::cout << "📡 Flooding LSA from Router " << lsa.GetOriginatingRouterId() 
-              << " to " << NeighborRouterIds.size() << " neighbors\n";
-    
-    // In a real implementation, you would send LSA packets to each neighbor
-    // For simulation, we mark LSA as flooded and increment statistics
-    for (uint16_t neighborId : NeighborRouterIds) {
-        std::cout << "   → Sending to neighbor: " << neighborId << "\n";
-        floodedNeighbors.push_back(neighborId);
-        statistics.TotalLSAsFlooded++;
-    }
-    
-    lastFloodTime = time(nullptr);
-    lastFloodedLSAs.insert(lsa.GetOriginatingRouterId());
-    
-    return floodedNeighbors;
-}
-
-std::vector<LinkStateAdvertisement> LSDB::GetNewLSAsToFlood() const {
-    std::vector<LinkStateAdvertisement> newLSAs;
-    
-    for (const auto& [routerId, lsa] : database) {
-        // Return LSAs that haven't been recently flooded
-        if (lastFloodedLSAs.find(routerId) == lastFloodedLSAs.end()) {
-            newLSAs.push_back(lsa);
-        }
-    }
-    
-    return newLSAs;
-}
-
-uint32_t LSDB::SyncWithNeighbors() {
-    uint32_t lsasFlooded = 0;
-    
-    std::cout << "\n" << std::string(70, '=') << "\n";
-    std::cout << "🔄 NETWORK SYNCHRONIZATION - Router " << LocalRouterId << "\n";
-    std::cout << std::string(70, '=') << "\n";
-    
-    // Flood all LSAs in the database to neighbors
-    for (const auto& [routerId, lsa] : database) {
-        if (FloodLSA(lsa).size() > 0) {
-            lsasFlooded++;
-        }
-    }
-    
-    std::cout << "✓ Synchronization complete. " << lsasFlooded 
-              << " LSAs flooded to " << NeighborRouterIds.size() 
-              << " neighbors\n";
-    std::cout << std::string(70, '=') << "\n\n";
-    
-    return lsasFlooded;
-}
-```
-
-## 2. Creating a Sync Button Widget
-
-### Implementation
-
-Create `Engine/include/SyncButton.hpp`:
-
-```cpp
-#ifndef SYNC_BUTTON_HPP
-#define SYNC_BUTTON_HPP
-
-#include "Widget.hpp"
-#include "Button.hpp"
-#include <functional>
-#include <cstdint>
-
-/**
- * @class SyncButton
- * @brief A specialized button for triggering LSDB synchronization on a router
- * 
- * When clicked, this button triggers LSA flooding for a specific router,
- * synchronizing its topology database with all neighbors.
- */
-class SyncButton : public Button {
-private:
-    uint16_t TargetRouterId;
-    std::function<void(uint16_t)> OnSyncCallback;
-
-public:
-    /**
-     * @brief Create a new sync button
-     * @param data Widget positioning and border data
-     * @param buttonInfo Button appearance and text
-     * @param routerId The router ID to synchronize
-     * @param onSync Callback function when sync is triggered
-     */
-    SyncButton(WidgetData data, ButtonData buttonInfo, uint16_t routerId,
-               std::function<void(uint16_t)> onSync)
-        : Button(data, buttonInfo), TargetRouterId(routerId), OnSyncCallback(onSync) {
-        // Override the default OnClick to call our sync logic
-        ButtonInfo.OnClick = [this]() {
-            if (OnSyncCallback) {
-                OnSyncCallback(TargetRouterId);
-            }
-        };
-    }
-
-    uint16_t GetTargetRouterId() const { return TargetRouterId; }
-    void SetTargetRouterId(uint16_t id) { TargetRouterId = id; }
+// Create sync button widget
+WidgetData syncBtnData{
+    .PosX = 10.0f,
+    .PosY = 60.0f,
+    .Width = 100.0f,
+    .Height = 35.0f,
+    .Border = {1.5f, DARKBLUE, true}
 };
 
-#endif // SYNC_BUTTON_HPP
-```
-
-## 3. Integration with Engine and Router
-
-### Method 1: Context Menu Approach
-
-When a router is clicked, display a sync button:
-
-```cpp
-// In Engine.cpp or UI handler
-void ShowRouterContextMenu(Router* router, Vec2 mousePos) {
-    WidgetData buttonData{
-        .PosX = mousePos.x,
-        .PosY = mousePos.y,
-        .Width = 120.0f,
-        .Height = 40.0f,
-        .Border = {2.0f, BLACK, true}
-    };
-
-    ButtonData btnInfo{
-        .IdleColor = SKYBLUE,
-        .HoverColor = YELLOW,
-        .ActiveColor = GREEN,
-        .Text = "Sync LSDB",
-        .OnClick = [router]() {
-            // Trigger sync on this router
-            uint32_t flooded = router->GetLSDB().SyncWithNeighbors();
-            std::cout << "Synced: " << flooded << " LSAs flooded\n";
-        }
-    };
-
-    auto syncBtn = std::make_unique<Button>(buttonData, btnInfo);
-    Widget::Register("router_sync_btn", std::move(syncBtn));
-    Widget::Draw("router_sync_btn");
-}
-```
-
-### Method 2: Persistent UI Approach
-
-Add a sync button to the main UI that acts on the currently selected router:
-
-```cpp
-// In Engine initialization
-void Engine::InitializeSyncButton() {
-    WidgetData syncBtnData{
-        .PosX = 10.0f,
-        .PosY = 60.0f,
-        .Width = 100.0f,
-        .Height = 35.0f,
-        .Border = {1.5f, DARKBLUE, true}
-    };
-
-    ButtonData syncBtnInfo{
-        .IdleColor = LIGHTBLUE,
-        .HoverColor = YELLOW,
-        .ActiveColor = GREEN,
-        .Text = "Sync",
-        .OnClick = [this]() {
-            // Get selected router and sync
-            if (auto selectedRouter = GetSelectedRouter()) {
-                uint32_t flooded = selectedRouter->GetLSDB().SyncWithNeighbors();
+ButtonData syncBtnInfo{
+    .IdleColor = LIGHTBLUE,
+    .HoverColor = YELLOW,
+    .ActiveColor = GREEN,
+    .Text = "Sync LSDB",
+    .OnClick = [this]() {
+        // Get currently selected router
+        if (auto selectedRouter = GetSelectedRouter()) {
+            Router* router = dynamic_cast<Router*>(selectedRouter);
+            if (router) {
+                // Trigger synchronization
+                uint32_t flooded = router->GetLSDB().SyncWithNeighbors();
                 std::cout << "✓ Synced " << flooded << " LSAs\n";
             }
+        } else {
+            std::cout << "⚠ No router selected. Click a router first.\n";
         }
-    };
+    }
+};
 
-    auto syncButton = std::make_unique<Button>(syncBtnData, syncBtnInfo);
-    Widget::Register("main_sync_btn", std::move(syncButton));
+auto syncButton = std::make_unique<Button>(syncBtnData, syncBtnInfo);
+Widget::Register("main_sync_btn", std::move(syncButton));
+```
+
+### Step 2: Draw the Sync Button
+
+In your render loop (e.g., in `DrawUI()` or `DrawMenuGUI()`):
+
+```cpp
+Widget::Draw("main_sync_btn");
+```
+
+### Step 3: Track Selected Router
+
+Add a member variable to your Engine class:
+
+```cpp
+class Engine {
+private:
+    INode* selectedRouter{nullptr};
+    
+    INode* GetSelectedRouter() const { return selectedRouter; }
+    void SetSelectedRouter(INode* node) { selectedRouter = node; }
+};
+```
+
+Update `ProcessNodeClick()` to set the selected router:
+
+```cpp
+void Engine::ProcessNodeClick() {
+    // ... existing collision detection code ...
+    
+    if (BasicNodeOperations::IsColliding(MousePos, *node)) {
+        nodeId = node->GetData().Id;
+        SetSelectedRouter(node.get());  // Track selection
+        break;
+    }
 }
 ```
 
-## 4. Workflow: Manual Network Synchronization
+## 3. Workflow: Step-by-Step Usage
 
-### Step-by-Step Example
+### Scenario: Synchronizing a 3-Router Network
 
-```cpp
-// Scenario: 3 routers in a network, need to synchronize
-
-// 1. Create network with routers
-NodeNetwork network;
-auto router1 = std::make_unique<Router>(Vec2{100, 100});
-auto router2 = std::make_unique<Router>(Vec2{300, 100});
-auto router3 = std::make_unique<Router>(Vec2{200, 250});
-
-network.AddNode(std::move(router1));
-network.AddNode(std::move(router2));
-network.AddNode(std::move(router3));
-
-// 2. Connect routers with edges
-network.AddEdge({1, 2});
-network.AddEdge({2, 3});
-network.AddEdge({1, 3});
-
-// 3. Get router references
-Router* r1 = static_cast<Router*>(network.GetNode(1));
-Router* r2 = static_cast<Router*>(network.GetNode(2));
-Router* r3 = static_cast<Router*>(network.GetNode(3));
-
-// 4. Create local LSAs describing their connections
-LinkStateEntry link1to2{
-    .LinkId = 100,
-    .SourceNodeId = 1,
-    .DestinationNodeId = 2,
-    .LinkCost = 10.0,
-    .LinkActive = true
-};
-LinkStateEntry link1to3{
-    .LinkId = 101,
-    .SourceNodeId = 1,
-    .DestinationNodeId = 3,
-    .LinkCost = 15.0,
-    .LinkActive = true
-};
-
-LinkStateAdvertisement lsa1(1);
-lsa1.AddLink(link1to2);
-lsa1.AddLink(link1to3);
-
-// 5. Add to each router's LSDB (in real system, would be via flooding)
-r1->GetLSDB().AddOrUpdateLSA(lsa1);
-r2->GetLSDB().AddOrUpdateLSA(lsa1);
-r3->GetLSDB().AddOrUpdateLSA(lsa1);
-
-// 6. User clicks sync button → triggers flooding
-r1->GetLSDB().SyncWithNeighbors();
+**Step 1: Create Network**
+```
+[Router 1] ←→ [Router 2]
+    ↓             ↓
+    └─→ [Router 3] ←┘
 ```
 
-## 5. Event Flow Diagram
+**Step 2: Click on Router 1**
+- Router 1 is now selected
+- Console shows: Router 1 basic info and LSDB state
 
-```
-User clicks Sync Button
-        ↓
-Button::OnClick() callback invoked
-        ↓
-Router::GetLSDB().SyncWithNeighbors() called
-        ↓
-LSDB loops through all LSAs in database
-        ↓
-For each LSA:
-    - FloodLSA(lsa) called
-    - For each neighbor:
-        * Send LSA (or simulate sending)
-        * Increment flood statistics
-        * Mark LSA as recently flooded
-        ↓
-Print synchronization summary
-        ↓
-UI Updates with new statistics
-```
-
-## 6. Console Output Example
-
-When sync button is clicked:
-
+**Step 3: Click the "Sync LSDB" Button**
+- Button triggers `Router1->GetLSDB().SyncWithNeighbors()`
+- Console output:
 ```
 ======================================================================
 🔄 NETWORK SYNCHRONIZATION - Router 1
@@ -361,113 +144,211 @@ When sync button is clicked:
 ======================================================================
 ```
 
-## 7. Advanced Features
+## 4. Integration with Router Click Events
 
-### Auto-Sync Timer
+The Router's `NodeClicked()` method now automatically prints:
 
-Automatically synchronize at intervals:
+1. **Router basic information**
+   - Router ID, IP address, type
+   - Connected edges, message queue size
+
+2. **Topology Database State**
+   - All LSAs in the LSDB
+   - Each LSA's links and their costs
+   - Direct neighbors
+   - Known neighbors from received LSAs
+
+3. **LSDB Statistics**
+   - Total LSAs received
+   - LSAs flooded
+   - Duplicate/stale rejections
+   - Last update time
+
+### Example Output When Clicking a Router
+
+```
+╔════════════════════════════════════════════════════════════════════╗
+║                    ROUTER CLICK EVENT                               ║
+╚════════════════════════════════════════════════════════════════════╝
+Router ID: 1
+Router Address: 192.168.1.1
+Router Type: Router
+Connected Edges: 2
+Message Queue Size: 0
+
+======================================================================
+TOPOLOGY DATABASE STATE FOR ROUTER 1 (192.168.1.1)
+======================================================================
+
+================ LSDB for Router 1 ================
+Total LSAs in Database: 3
+Known Neighbors: 3
+
+Neighbor IDs: 1 2 3 
+
+========== LSA ==========
+Originating Router ID: 1
+Sequence Number: 5
+Age: 12 seconds
+Checksum: 0xabcdef12
+Number of Links: 2
+
+Links:
+  LinkID      Source        Dest      Cost    Active
+--------------------------------------------------
+     100           1           2      10.00        Yes
+     102           1           3      15.50        Yes
+=======================
+
+[Additional LSAs from Router 2 and Router 3...]
+
+Direct Neighbors from Local LSA: 2 3 
+
+Known Neighbors (from LSAs received): 1 2 3 
+======================================================================
+
+======================================================================
+LSDB STATISTICS FOR ROUTER 1 (192.168.1.1)
+======================================================================
+
+================ LSDB Statistics ================
+Local Router ID: 1
+Total LSAs Received: 47
+Total LSAs Flooded: 45
+Duplicate Rejections: 2
+Stale Rejections: 0
+Last Update: 2026-06-13 14:23:15
+================================================
+
+Router Information:
+  Router ID: 1
+  Router Address: 192.168.1.1
+  Router Type: Router
+  Number of Edges: 2
+  Message Queue Size: 0
+  Total LSAs in Database: 3
+======================================================================
+```
+
+## 5. Complete Integration Example
+
+### Full Example: Engine with Sync Button
 
 ```cpp
-class AutoSyncTimer {
+class Engine {
 private:
-    LSDB* targetLSDB;
-    float syncInterval{5.0f};  // Every 5 seconds
-    float timeSinceLastSync{0.0f};
+    INode* selectedRouter{nullptr};
+    
+    void InitializeSyncButton() {
+        WidgetData syncBtnData{
+            .PosX = 10.0f,
+            .PosY = 60.0f,
+            .Width = 100.0f,
+            .Height = 35.0f,
+            .Border = {1.5f, DARKBLUE, true}
+        };
+
+        ButtonData syncBtnInfo{
+            .IdleColor = LIGHTBLUE,
+            .HoverColor = YELLOW,
+            .ActiveColor = GREEN,
+            .Text = "Sync LSDB",
+            .OnClick = [this]() {
+                if (selectedRouter) {
+                    if (auto router = dynamic_cast<Router*>(selectedRouter)) {
+                        uint32_t flooded = router->GetLSDB().SyncWithNeighbors();
+                        std::cout << "✓ Synced " << flooded << " LSAs\n";
+                    }
+                } else {
+                    std::cout << "⚠ Select a router first\n";
+                }
+            }
+        };
+
+        auto syncButton = std::make_unique<Button>(syncBtnData, syncBtnInfo);
+        Widget::Register("sync_btn", std::move(syncButton));
+    }
+
+    void ProcessNodeClick() {
+        Vec2 mousePos = GetMousePosition();
+        
+        for (auto& [id, node] : nodes.GetNodeMap()) {
+            if (BasicNodeOperations::IsColliding(mousePos, *node)) {
+                selectedRouter = node.get();
+                node->NodeClicked();  // Prints LSDB state
+                return;
+            }
+        }
+    }
+
+    void DrawUI() {
+        Widget::Draw("sync_btn");
+    }
 
 public:
-    void Update(float deltaTime) {
-        timeSinceLastSync += deltaTime;
-        if (timeSinceLastSync >= syncInterval) {
-            if (targetLSDB) {
-                targetLSDB->SyncWithNeighbors();
-            }
-            timeSinceLastSync = 0.0f;
-        }
+    Engine() {
+        InitializeSyncButton();
     }
 };
 ```
 
-### Selective Flooding
+## 6. Adding Auto-Sync Timer (Optional)
 
-Flood only to specific neighbors:
+For automatic periodic synchronization:
 
 ```cpp
-std::vector<uint16_t> LSDB::FloodLSAToNeighbor(
-    const LinkStateAdvertisement& lsa, 
-    uint16_t neighborId) {
-    
-    if (!IsKnownNeighbor(neighborId)) {
-        std::cerr << "Error: " << neighborId << " is not a known neighbor\n";
-        return {};
+class AutoSyncManager {
+private:
+    Router* targetRouter;
+    float syncInterval{5.0f};  // Every 5 seconds
+    float timeSinceLastSync{0.0f};
+    bool enabled{false};
+
+public:
+    void Update(float deltaTime) {
+        if (!enabled || !targetRouter) return;
+        
+        timeSinceLastSync += deltaTime;
+        if (timeSinceLastSync >= syncInterval) {
+            targetRouter->GetLSDB().SyncWithNeighbors();
+            timeSinceLastSync = 0.0f;
+        }
     }
-    
-    std::cout << "📡 Flooding LSA " << lsa.GetOriginatingRouterId() 
-              << " to neighbor " << neighborId << "\n";
-    
-    statistics.TotalLSAsFlooded++;
-    return {neighborId};
-}
+
+    void SetTarget(Router* router) { targetRouter = router; }
+    void Enable() { enabled = true; }
+    void Disable() { enabled = false; }
+};
 ```
 
-## 8. Testing the Implementation
+## 7. Summary
 
-### Test Case 1: Simple Flood
+You now have:
 
-```cpp
-void TestSimpleFlood() {
-    LSDB db1(1), db2(2);
-    db1.AddNeighbor(2);
-    db2.AddNeighbor(1);
-    
-    LinkStateAdvertisement lsa(1);
-    LinkStateEntry link{.LinkId = 1, .SourceNodeId = 1, .DestinationNodeId = 2, .LinkCost = 10.0};
-    lsa.AddLink(link);
-    
-    db1.AddOrUpdateLSA(lsa);
-    
-    // Simulate flood
-    auto flooded = db1.FloodLSA(lsa);
-    assert(flooded.size() == 1);
-    assert(flooded[0] == 2);
-    
-    std::cout << "✓ Simple flood test passed\n";
-}
-```
+✅ **LSA Flooding System**
+- Routers can flood their LSAs to neighbors
+- Sequence numbers prevent duplicate/stale updates
+- Statistics tracking for monitoring
 
-## 9. Integration Checklist
+✅ **Sync Button Widget**
+- Easy UI integration using your widget system
+- Triggers network synchronization with one click
+- Provides visual feedback via console output
 
-- [ ] Add flooding methods to LSDB class
-- [ ] Implement `CreateLocalLSA()` method
-- [ ] Implement `FloodLSA()` method
-- [ ] Implement `SyncWithNeighbors()` method
-- [ ] Create SyncButton widget class
-- [ ] Add sync button to Engine UI
-- [ ] Connect button click to LSDB sync
-- [ ] Test flooding with multiple routers
-- [ ] Add auto-sync timer (optional)
-- [ ] Add statistics tracking to UI
+✅ **LSDB State Inspection**
+- Click any router to see its topology database
+- View all LSAs, links, and neighbors
+- Monitor LSDB statistics and health
 
-## 10. Troubleshooting
+✅ **Network Synchronization**
+- Manual sync with the sync button
+- Optional auto-sync with timers
+- Real-time console visualization of flooding
 
-### Issue: Sync button doesn't appear
-- **Solution**: Check widget registration and visibility flags
-- **Verify**: `Widget::Register()` called and `Widget::Draw()` invoked in render loop
+## Next Steps
 
-### Issue: Flooding not reaching all neighbors
-- **Solution**: Ensure neighbors are added with `AddNeighbor()` before syncing
-- **Verify**: Check `GetNeighbors()` returns expected routers
-
-### Issue: Stale LSAs keep flooding
-- **Solution**: Implement flood history tracking (already included)
-- **Verify**: `lastFloodedLSAs` is being updated
-
-## Summary
-
-The LSA flooding mechanism allows your network simulation to maintain synchronized topology information across all routers. The sync button provides an intuitive way to trigger this synchronization from the UI, making it easy to test and visualize network convergence.
-
-With this implementation, you can now:
-- ✅ Manually trigger network synchronization
-- ✅ Observe LSA flooding in real-time via console output
-- ✅ Track synchronization statistics
-- ✅ Test routing protocol convergence
-- ✅ Visualize topology propagation through the network
+1. Integrate sync button into your Engine UI
+2. Test with multiple routers
+3. Implement auto-sync timer (optional)
+4. Add UI indicators for sync status (future enhancement)
+5. Implement actual packet sending (advanced)
