@@ -118,6 +118,8 @@ private:
     uint16_t LocalRouterId{0};
     std::map<uint16_t, LinkStateAdvertisement> database;  // Key: Originating Router ID
     std::set<uint16_t> NeighborRouterIds;
+    std::set<uint16_t> lastFloodedLSAs;  // Track which LSAs were recently flooded
+    time_t lastFloodTime{0};
     
     struct LSDBStats {
         uint32_t TotalLSAsReceived{0};
@@ -223,11 +225,37 @@ public:
     
     // Flooding
     /**
+     * @brief Prepare local LSA from current network links for flooding
+     * @param localLinks Vector of links connected to this router
+     * @return LinkStateAdvertisement ready to flood
+     */
+    LinkStateAdvertisement CreateLocalLSA(const std::vector<LinkStateEntry>& localLinks);
+    
+    /**
+     * @brief Flood an LSA to all neighbors
+     * @param lsa The advertisement to flood
+     * @return Vector of neighbor IDs that received the LSA
+     */
+    std::vector<uint16_t> FloodLSA(const LinkStateAdvertisement& lsa);
+    
+    /**
      * @brief Get LSAs that need to be flooded to neighbors
      * Typically returns newly received or updated LSAs
      * @return Vector of LSAs to be flooded
      */
     std::vector<LinkStateAdvertisement> GetLSAsToFlood() const;
+    
+    /**
+     * @brief Get LSAs that haven't been recently flooded
+     * @return Vector of LSAs needing to be flooded
+     */
+    std::vector<LinkStateAdvertisement> GetNewLSAsToFlood() const;
+    
+    /**
+     * @brief Manually trigger a full synchronization with all neighbors
+     * @return Number of LSAs flooded
+     */
+    uint32_t SyncWithNeighbors();
     
     // Statistics and diagnostics
     /**
