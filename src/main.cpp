@@ -3,7 +3,6 @@
 #include <functional>
 #include <iostream>
 #include <vector>
-#include "AutoSyncManager.hpp"
 #include "Node.hpp"
 #include "Router.hpp"
 #include <Button.hpp>
@@ -191,15 +190,6 @@ int main() {
         }
     });
 
-    /*Engine::RegisterUpdateFunction({
-        [&]() {
-            auto selectedNode = Engine::GetSelectedNode();
-            if (selectedNode && dynamic_cast<Router*>(selectedNode)) {
-                AutoSyncManager::SetTarget(dynamic_cast<Router*>(selectedNode));
-            }
-            AutoSyncManager::Update(env.DeltaTime);
-        }
-    });*/
     Engine::Loop();
     return 0;
 }
