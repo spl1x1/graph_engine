@@ -47,15 +47,10 @@ int main() {
         .HoverColor = LIGHTGRAY,
         .Text = "Sync LSDB",
         .OnClick = [](){
-            INode* selected = Engine::GetSelectedNode();
-            if (selected) {
-                if (auto* router = dynamic_cast<Router*>(selected)) {
-                    router->GetLSDB().SyncWithNeighbors();
-                } else {
-                    std::cout << "Selected node is not a Router\n";
+            for (INode* node : Engine::GetAllNodes()) {
+                if (auto* router = dynamic_cast<Router*>(node)) {
+                    router->SyncWithNetwork();
                 }
-            } else {
-                std::cout << "No router selected. Click a router first.\n";
             }
         }
     };

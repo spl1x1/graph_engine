@@ -134,6 +134,7 @@ public:
     virtual void PushMessage(Message message) = 0;
     virtual NodeData& GetData() = 0;
     virtual void NodeClicked() = 0;
+    virtual void OnEdgeAdded(INode* neighbor, const Edge& edge) {}
 
 
     virtual ~INode() = default;

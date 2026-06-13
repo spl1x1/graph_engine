@@ -1,6 +1,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstddef>
+#include <format>
 #include <iostream>
 #include <ranges>
 #include <string>
@@ -524,4 +525,13 @@ void Engine::RegisterUpdateFunction(std::function<void()> func) {
 INode* Engine::GetSelectedNode(){
     if (!instance) return nullptr;
     return instance->nodes.GetSelectedNode();
+}
+
+std::vector<INode*> Engine::GetAllNodes() {
+    std::vector<INode*> result;
+    if (!instance) return result;
+    for (const auto& [id, node] : instance->nodes.GetNodeMap()) {
+        if (node) result.push_back(node.get());
+    }
+    return result;
 }

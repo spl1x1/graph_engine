@@ -164,6 +164,10 @@ void NodeNetwork::AddEdge(EdgeData edge){
     //Push edge to both nodes
     GetNode(edge.NodeA)->GetData().Edges.push_back(key.Id);
     GetNode(edge.NodeB)->GetData().Edges.push_back(key.Id);
+
+    const Edge& storedEdge = edges.at(key.Id);
+    GetNode(edge.NodeA)->OnEdgeAdded(GetNode(edge.NodeB), storedEdge);
+    GetNode(edge.NodeB)->OnEdgeAdded(GetNode(edge.NodeA), storedEdge);
 }
 
 void NodeNetwork::RemoveEdge(const uint16_t id){

@@ -67,6 +67,7 @@ public:
     static void RegisterNodeType(const std::string& typeName, std::function<std::unique_ptr<INode>(Vec2 position)> factoryFunction);
     static void RegisterUpdateFunction(std::function<void()> updateFunction);
     static INode* GetSelectedNode();
+    static std::vector<INode*> GetAllNodes();
 };
 
 #endif // ENGINE_HPP
