@@ -211,14 +211,21 @@ void NodeNetwork::RemoveEdge(const uint16_t id){
 
     const auto edge{edges.at(id)};
 
+    auto* nodeA = GetNode(edge.Key.NodeA);
+    auto* nodeB = GetNode(edge.Key.NodeB);
+
     //Remove edge from both nodes
-    auto& nodeAEdges{GetNode(edge.Key.NodeA)->GetData().Edges};
+    auto& nodeAEdges{nodeA->GetData().Edges};
     nodeAEdges.erase(std::remove(nodeAEdges.begin(), nodeAEdges.end(), id), nodeAEdges.end());
 
-    auto& nodeBEdges{GetNode(edge.Key.NodeB)->GetData().Edges};
+    auto& nodeBEdges{nodeB->GetData().Edges};
     nodeBEdges.erase(std::remove(nodeBEdges.begin(), nodeBEdges.end(), id), nodeBEdges.end());
 
     edges.erase(id);
+
+    // Notify both nodes so they can update their topology databases
+    nodeA->OnEdgeRemoved(nodeB, edge);
+    nodeB->OnEdgeRemoved(nodeA, edge);
 }
 
 INode* NodeNetwork::GetNode(const uint16_t id) const {

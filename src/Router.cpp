@@ -163,6 +163,45 @@ void Router::OnEdgeAdded(INode* neighbor, const Edge& edge) {
     SyncWithNetwork();
 }
 
+void Router::OnEdgeRemoved(INode* neighbor, const Edge& edge) {
+    if (Data.Id == 0 || neighbor == nullptr) return;
+
+    // Remove the link entry for this edge from our local LSA
+    LinkStateAdvertisement* localLSA = topology.GetLSA(Data.Id);
+    if (localLSA != nullptr) {
+        localLSA->RemoveLink(edge.Key.Id);
+        localLSA->IncrementSequenceNumber();
+        localLSA->ResetAge();
+        localLSA->CalculateChecksum();
+        topology.AddOrUpdateLSA(*localLSA);
+    }
+
+    const uint16_t neighborId = neighbor->GetData().Id;
+
+    // If we have no more links to this neighbor, remove their LSA and neighbor entry
+    bool stillConnected = false;
+    const LinkStateAdvertisement* updatedLSA = topology.GetLSA(Data.Id);
+    if (updatedLSA != nullptr) {
+        for (const auto& link : updatedLSA->GetLinks()) {
+            if (link.DestinationNodeId == neighborId && link.LinkActive) {
+                stillConnected = true;
+                break;
+            }
+        }
+    }
+
+    if (!stillConnected) {
+        topology.RemoveLSA(neighborId);
+        topology.RemoveNeighbor(neighborId);
+    }
+
+    std::cout << "🔌 Router " << Data.Id << " removed link to Router "
+              << neighborId << " (edge " << edge.Key.Id << ")\n";
+
+    // Flood updated LSA to remaining neighbors
+    SyncWithNetwork();
+}
+
 uint32_t Router::SyncWithNetwork() {
     if (Data.Network == nullptr) return 0;
 
