@@ -109,7 +109,7 @@ struct Event{
 struct NodeData{
   uint16_t Id = 0; // Unique identifier for the node, basically ip address
   IPAddress Address; // IP address of the node, used for routing and identification
-  std::string Type = "Undefined";
+  std::string Type;
   std::vector<uint16_t> Edges{};
   std::queue<Message> MessageQueue{};
   Message currentMessage;
@@ -174,6 +174,7 @@ public:
     struct EdgeData{
         uint16_t NodeA;
         uint16_t NodeB;
+        int Speed{-1};
     };
 
     void AddEdge(EdgeData edge);

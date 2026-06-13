@@ -1,3 +1,4 @@
+#include "SandboxSave.hpp"
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -19,17 +20,23 @@ Engine::Engine(Enviroment *env, SandboxData *sandboxData) : env(env), sandboxDat
     // Initialize raylib
     InitWindow(env->Window.Width, env->Window.Height, env->Title.c_str());
     SetTargetFPS(env->Window.FrameRate);
-
+    SetExitKey(KEY_P);
 }
 
 void Engine::Init(Enviroment *env, SandboxData *sandboxData) {
+
+    constexpr int TemplateWidth{150};
+    constexpr int TemplateHeight{20};
+
+    const auto ScreenCenterX {env->Window.Width/2};
+    const auto ScreenCenterY{env->Window.Height/2};
 
     const auto WidgetDataTemplate = [] (const float PosX, const float PosY) -> WidgetData {
         return WidgetData{
             .PosX = PosX,
             .PosY = PosY,
-            .Width = 150,
-            .Height = 20,
+            .Width = TemplateWidth,
+            .Height = TemplateHeight,
             .Border = {0.0f, WHITE}
         };
     };
@@ -38,8 +45,8 @@ void Engine::Init(Enviroment *env, SandboxData *sandboxData) {
         return WidgetData{
             .PosX = PosX,
             .PosY = PosY,
-            .Width = 20,
-            .Height = 20,
+            .Width = TemplateHeight,
+            .Height = TemplateHeight,
             .Border = {0.0f, WHITE}
         };
     };
@@ -51,6 +58,7 @@ void Engine::Init(Enviroment *env, SandboxData *sandboxData) {
             .OnClick = OnClick
         };
     };
+
 
     [[unlikely]]
     if (instance != nullptr) {
@@ -107,6 +115,9 @@ void Engine::Init(Enviroment *env, SandboxData *sandboxData) {
         instance->nodes.SelectedLinkSpeed = instance->sandboxData->Edit.SelectedSpeed;
     });
 
+    const auto MenuPositionX{ScreenCenterX-(TemplateWidth/2)};
+    const auto MenuPostionY{ScreenCenterY-(TemplateHeight/2)};
+
 
     Widget::Register("ClearButton", std::make_unique<Button>(ClearWidgetData, ClearButtonData));
     Widget::Register("AddEdgeButton", std::make_unique<Button>(AddEdgeWidgetData, AddEdgeButtonData));
@@ -116,7 +127,6 @@ void Engine::Init(Enviroment *env, SandboxData *sandboxData) {
     Widget::Register("AreaOctet2PlusButton", std::make_unique<Button>(AreaOctet2PlusWidgetData, AreaOctet2PlusButtonData));
     Widget::Register("AreaOctet2MinusButton", std::make_unique<Button>(AreaOctet2MinusWidgetData, AreaOctet2MinusButtonData));
     Widget::Register("LinkSpeedButton", std::make_unique<Button>(LinkSpeedWidgetData, LinkSpeedButtonData));
-
     Widget::AddToGroup(
         "EditButtons", {
         "ClearButton",
@@ -130,6 +140,21 @@ void Engine::Init(Enviroment *env, SandboxData *sandboxData) {
         });
 }
 
+void Engine::InitSave(const std::string& saveFile) {
+    if (instance == nullptr) {
+        std::cerr << "Error: Engine must be initialized before calling InitSave" << "\n";
+        return;
+    }
+
+    SandboxVariablePointers pointers{
+        .Network = &instance->nodes,
+        .Sandbox = instance->sandboxData,
+        .NodeFactory = &instance->NodeFactory
+    };
+
+    SandboxSave::Init(saveFile, pointers);
+}
+
 void Engine::Loop() {
     auto CallUpdateFunctions = []() {
         for (const auto& func: instance->UpdateFunctions) {
@@ -138,16 +163,18 @@ void Engine::Loop() {
     };
 
     assert(instance != nullptr && "Engine must be initialized before calling Loop");
+
     while (!WindowShouldClose()) {
         ProcessInput();
         Widget::EndDrawing();
         CallUpdateFunctions();
         BeginDrawing();
+
         DrawSandbox();
+
         ClearBackground(RAYWHITE);
         EndDrawing();
-        instance->env->DeltaTime = GetFrameTime();
-    }
+        instance->env->DeltaTime = GetFrameTime();    }
     std::cout << "Engine loop ended" << "\n";
 }
 
@@ -223,6 +250,7 @@ void Engine::DrawSandbox() {
     engine->DrawEdges();
     engine->DrawUI();
 }
+
 
 void Engine::ProcessCameraMovement(){
     //Mouse dragging for camera movement
@@ -330,6 +358,10 @@ void Engine::ProcessKeyboard(){
     if (IsKeyPressed(KEY_H)) {
         sandboxData->ShowSpeed = !sandboxData->ShowSpeed;
     }
+    if (IsKeyPressed(KEY_ESCAPE)){
+        SandboxSave::Save();
+        std::cout<< "Saving sandbox! \n";
+    }
 }
 
 void Engine::ResetInputBlock() {
@@ -363,8 +395,7 @@ void Engine::ProcessTextInput(){
 
 
 void Engine::ProcessInput() {
-    //Mouse inputs
-
+    //Input processing
     #define ENTRY(type, func) if (!instance->inputBlock.Blocked || instance->inputBlock.Type == InputBlock::BlockType::type) func;
      INPUT_TABLE
     #undef ENTRY
@@ -450,6 +481,10 @@ void Engine::DrawUI() {
     Widget::Draw("ClearButton");
     Widget::Draw("SyncButton");
 }
+
+void Engine::DrawMenuGUI(){
+    Widget::DrawGroup("MenuButtons");
+};
 
 void Engine::DrawNode(INode& node) {
     const auto NodeScreenPos{node.GetScreenPosition(instance->sandboxData->Camera)};

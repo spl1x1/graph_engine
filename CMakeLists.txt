@@ -15,6 +15,11 @@ file (GLOB_RECURSE LIB_SOURCE_FILES
     Engine/src/*.cpp
 )
 
+file (GLOB_RECURSE RAPIDJSON_HEADERS CONFIGURE_DEPENDS
+  Engine/third_party/rapidjson/*.h
+)
+
+
 
 file (GLOB_RECURSE EXECUTABLE_HEADERS
   include/*.hpp
@@ -37,10 +42,17 @@ add_library(EngineLib STATIC
   ${LIB_HEADERS}
 )
 
+add_library(RapidJSON INTERFACE)
+target_include_directories(RapidJSON INTERFACE
+  "${CMAKE_CURRENT_SOURCE_DIR}/Engine/third_party/rapidjson"
+)
+
+
 add_executable(EngineExecutable
   ${EXECUTABLE_FILES}
   ${EXECUTABLE_HEADERS}
 )
+
 
 # CPM - CMake Package Manager
 set(CPM_PATH "cmake/CPM.cmake")
@@ -56,9 +68,12 @@ CPMAddPackage(
         GIT_TAG  5.5
 )
 
+
 #Package linkage
 target_link_libraries(EngineLib
-    PUBLIC raylib
+    PUBLIC
+    raylib
+    RapidJSON
 )
 
 target_include_directories(EngineLib

@@ -109,7 +109,21 @@ bool IPAddress::operator==(const IPAddress& other) const {
 
 //NodeNetwork
 void NodeNetwork::AddNode(std::unique_ptr<INode> node, IPAddress networkArea) {
+
+    auto CheckForIPConflict = [&](const IPAddress& address) -> bool {
+        for (const auto& node : nodes | std::views::values) {
+            if (node->GetData().Address == address) return true;
+        }
+        return false;
+    };
+
     auto areaSize{GetArea(networkArea).size()};
+    auto& data = node->GetData();
+
+    //Loaded node from save file
+    if (data.Id > 0){
+        nodeIdCounter = data.Id;
+    }
 
     while (areaSize >=255) {
         if (networkArea.octets[2] >= 255) {
@@ -119,18 +133,25 @@ void NodeNetwork::AddNode(std::unique_ptr<INode> node, IPAddress networkArea) {
         networkArea.octets[2]++;
         areaSize -= 255;
     }
-    networkArea.octets[3] = static_cast<uint8_t>(areaSize + 1);
 
-    NodeData data{
-        .Id = nodeIdCounter,
-        .Address = networkArea,
-        .Network = this
-    };
+    //Assign its own ip while loading from save file, to prevent ip conflicts, if octet 3 is 0, assign it to areaSize + 1, otherwise keep the loaded ip, but check if it's not conflicting with existing nodes in the area
+    networkArea.octets[3] = networkArea.octets[3] == 0 ? static_cast<uint8_t>(areaSize + 1): networkArea.octets[3];
+    while (CheckForIPConflict(networkArea)) {
+        networkArea.octets[3]++;
+        if (networkArea.octets[3] == 0) {
+            std::cerr << "Error: Network area " << networkArea.ToString() << " is full. Cannot add more nodes to this area.\n";
+            return;
+        }
+    }
 
-    node->UpdateNodeData(data);
+    data.Id = nodeIdCounter;
+    data.Address = networkArea;
+    data.Network = this;
+
+
+
     nodes.insert_or_assign(nodeIdCounter, std::move(node));
     ipAddressMap.insert_or_assign(data.Address.ToString(), data.Id);
-
     nodeIdCounter++;
 };
 
@@ -147,12 +168,19 @@ void NodeNetwork::RemoveNode(const uint16_t id){
 };
 
 void NodeNetwork::AddEdge(EdgeData edge){
+    auto nodeA = GetNode(edge.NodeA);
+    auto nodeB = GetNode(edge.NodeB);
+    if (nodeA == nullptr || nodeB == nullptr) {
+        std::cerr << "Error: One or both nodes not found for edge. NodeA id: " << edge.NodeA << ", NodeB id: " << edge.NodeB << ". Cannot add edge.\n";
+        return;
+    }
+
     Edge::EdgeKey key{
         .Id = edgeIdCounter++,
         .NodeA = edge.NodeA,
         .NodeB = edge.NodeB,
-        .AddressA = GetNode(edge.NodeA)->GetData().Address,
-        .AddressB = GetNode(edge.NodeB)->GetData().Address
+        .AddressA = nodeA->GetData().Address,
+        .AddressB = nodeB->GetData().Address,
 
     };
 
@@ -163,7 +191,8 @@ void NodeNetwork::AddEdge(EdgeData edge){
             return;
         }
 
-    auto edgeObj{Edge(key, SelectedLinkSpeed)};
+    auto speed{(edge.Speed >= 0 && edge.Speed < LinkSpeedsCount) ? static_cast<LinkSpeed>(edge.Speed): SelectedLinkSpeed};
+    auto edgeObj{Edge(key, speed)};
 
 
     edges.insert_or_assign(key.Id, edgeObj);

@@ -1,7 +1,7 @@
 #ifndef ENGINE_TYPES_HPP
 #define ENGINE_TYPES_HPP
 
-#include "Node.hpp"
+#include <Node.hpp>
 #include <string>
 #include <sys/types.h>
 #include <Vector.hpp>
