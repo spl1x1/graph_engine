@@ -108,7 +108,17 @@ void Engine::Init(Enviroment *env, SandboxData *sandboxData) {
     });
 
 
+    const auto SendMessageWidgetData = WidgetDataTemplate(10, 220);
+    const auto SendMessageButtonData = ButtonDataTemplate("Send Message", [](){
+        if (instance->sandboxData->MessageComp.Active) {
+            std::cout << "Already composing a message\n";
+            return;
+        }
+        instance->StartMessageComposition();
+    });
+
     Widget::Register("ClearButton", std::make_unique<Button>(ClearWidgetData, ClearButtonData));
+    Widget::Register("SendMessageButton", std::make_unique<Button>(SendMessageWidgetData, SendMessageButtonData));
     Widget::Register("AddEdgeButton", std::make_unique<Button>(AddEdgeWidgetData, AddEdgeButtonData));
     Widget::Register("RemoveNodeButton", std::make_unique<Button>(RemoveWidgetData, RemoveButtonData));
     Widget::Register("AreaOctet1PlusButton", std::make_unique<Button>(AreaOctet1PlusWidgetData, AreaOctet1PlusButtonData));
@@ -126,7 +136,8 @@ void Engine::Init(Enviroment *env, SandboxData *sandboxData) {
         "AreaOctet1MinusButton",
         "AreaOctet2PlusButton",
         "AreaOctet2MinusButton",
-        "LinkSpeedButton"
+        "LinkSpeedButton",
+        "SendMessageButton"
         });
 }
 
@@ -222,6 +233,7 @@ void Engine::DrawSandbox() {
     engine->DrawNodes();
     engine->DrawEdges();
     engine->DrawUI();
+    engine->DrawMessageCompositionUI();
 }
 
 void Engine::ProcessCameraMovement(){
@@ -303,6 +315,31 @@ void Engine::ProcessNodeClick() {
     const auto zoom {instance->sandboxData->Zoom};
     Vec2 worldPos{mousePos[0] / zoom + instance->sandboxData->Camera[0], mousePos[1] / zoom + instance->sandboxData->Camera[1]};
 
+    // Handle node selection during message composition
+    MessageCompositionState& comp = instance->sandboxData->MessageComp;
+    if (comp.Active) {
+        for (const auto& [id, node] : instance->nodes.GetNodeMap()) {
+            if (!node) continue;
+            if (BasicNodeOperations::IsColliding(worldPos, *node)) {
+                if (comp.SourceNodeId == 0) {
+                    comp.SourceNodeId = id;
+                    std::cout << "Source selected: Router " << id << "\n";
+                    std::cout << "Now click the destination node\n";
+                } else if (comp.DestinationNodeId == 0) {
+                    if (id == comp.SourceNodeId) {
+                        std::cout << "Cannot select same node as source and destination\n";
+                        return;
+                    }
+                    comp.DestinationNodeId = id;
+                    std::cout << "Destination selected: Router " << id << "\n";
+                    std::cout << "Start typing your message (max 100 chars). Press Enter to send, Esc to cancel\n";
+                }
+                return;
+            }
+        }
+        return;
+    }
+
     const auto mode{instance->sandboxData->Edit.SelectedMode};
 
     instance->inputBlock = {
@@ -312,6 +349,12 @@ void Engine::ProcessNodeClick() {
 }
 
 void Engine::ProcessKeyboard(){
+    // If in message composition mode, handle input there instead
+    if (sandboxData->MessageComp.Active) {
+        HandleMessageInput();
+        return;
+    }
+
     //Keyboard inputs
 
     // Toggle editing mode with E key
@@ -563,4 +606,161 @@ std::optional<SelectedNodes> Engine::ConsumeMessageSelection() {
 void Engine::FlashEdgeBetween(uint16_t nodeA, uint16_t nodeB, float durationSeconds) {
     if (!instance) return;
     instance->nodes.FlashEdgeBetween(nodeA, nodeB, durationSeconds);
+}
+
+MessageCompositionState& Engine::GetMessageCompState() {
+    return sandboxData->MessageComp;
+}
+
+void Engine::StartMessageComposition() {
+    MessageCompositionState& comp = sandboxData->MessageComp;
+    comp.Active = true;
+    comp.SourceNodeId = 0;
+    comp.DestinationNodeId = 0;
+    comp.Content.clear();
+    comp.TimeSinceLastInput = 0.0f;
+    std::cout << "Message composition started. Click the source node\n";
+}
+
+void Engine::CancelMessageComposition() {
+    MessageCompositionState& comp = sandboxData->MessageComp;
+    comp.Active = false;
+    comp.SourceNodeId = 0;
+    comp.DestinationNodeId = 0;
+    comp.Content.clear();
+    comp.TimeSinceLastInput = 0.0f;
+    std::cout << "Message composition cancelled\n";
+}
+
+void Engine::HandleMessageInput() {
+    MessageCompositionState& comp = sandboxData->MessageComp;
+
+    // Only capture text once both nodes are selected
+    if (comp.SourceNodeId != 0 && comp.DestinationNodeId != 0) {
+        int key = GetCharPressed();
+        while (key > 0) {
+            if (key >= 32 && key <= 126 && comp.Content.length() < 100) {
+                comp.Content += static_cast<char>(key);
+                comp.TimeSinceLastInput = 0.0f;
+            }
+            key = GetCharPressed();
+        }
+
+        if (IsKeyPressed(KEY_BACKSPACE) && !comp.Content.empty()) {
+            comp.Content.pop_back();
+            comp.TimeSinceLastInput = 0.0f;
+        }
+
+        if (IsKeyPressed(KEY_ENTER)) {
+            SendComposedMessage();
+            return;
+        }
+
+        // Update timeout
+        comp.TimeSinceLastInput += env->DeltaTime;
+        if (comp.TimeSinceLastInput >= comp.InputTimeout) {
+            std::cout << "Message input timed out\n";
+            CancelMessageComposition();
+            return;
+        }
+    }
+
+    if (IsKeyPressed(KEY_ESCAPE)) {
+        CancelMessageComposition();
+    }
+}
+
+void Engine::SendComposedMessage() {
+    MessageCompositionState& comp = sandboxData->MessageComp;
+
+    if (comp.SourceNodeId == 0 || comp.DestinationNodeId == 0) {
+        std::cout << "Error: Source or destination node not selected\n";
+        return;
+    }
+
+    if (comp.Content.empty()) {
+        std::cout << "Error: Message is empty\n";
+        return;
+    }
+
+    INode* sourceNode = nodes.GetNode(comp.SourceNodeId);
+    INode* destNode = nodes.GetNode(comp.DestinationNodeId);
+
+    if (!sourceNode || !destNode) {
+        std::cout << "Error: One or both nodes not found\n";
+        CancelMessageComposition();
+        return;
+    }
+
+    Message msg{
+        .SenderAddress = sourceNode->GetData().Address,
+        .ReceiverAddress = destNode->GetData().Address,
+        .DestinationId = comp.DestinationNodeId,
+        .OriginId = comp.SourceNodeId,
+        .Content = comp.Content
+    };
+
+    sourceNode->SendMessage(msg);
+    std::cout << "Message sent from Router " << comp.SourceNodeId
+              << " to Router " << comp.DestinationNodeId
+              << ": \"" << comp.Content << "\"\n";
+
+    CancelMessageComposition();
+}
+
+void Engine::DrawMessageCompositionUI() {
+    MessageCompositionState& comp = sandboxData->MessageComp;
+    if (!comp.Active) return;
+
+    const int winW = static_cast<int>(env->Window.Width);
+    const int winH = static_cast<int>(env->Window.Height);
+
+    // Semi-transparent overlay
+    DrawRectangle(0, 0, winW, winH, Color{0, 0, 0, 100});
+
+    // Central message box
+    constexpr int boxW = 500;
+    constexpr int boxH = 200;
+    const int boxX = winW / 2 - boxW / 2;
+    const int boxY = winH / 2 - boxH / 2;
+
+    DrawRectangle(boxX, boxY, boxW, boxH, DARKGRAY);
+    DrawRectangleLines(boxX, boxY, boxW, boxH, YELLOW);
+
+    // Status title
+    DrawText("COMPOSING MESSAGE", boxX + 20, boxY + 15, 20, YELLOW);
+
+    // Node info
+    const std::string srcStr = comp.SourceNodeId == 0 ? "?" : std::to_string(comp.SourceNodeId);
+    const std::string dstStr = comp.DestinationNodeId == 0 ? "?" : std::to_string(comp.DestinationNodeId);
+    const std::string nodeInfo = "From: Router " + srcStr + "  ->  To: Router " + dstStr;
+    DrawText(nodeInfo.c_str(), boxX + 20, boxY + 45, 16, WHITE);
+
+    // Input box
+    DrawRectangle(boxX + 20, boxY + 80, boxW - 40, 40, BLACK);
+    DrawRectangleLines(boxX + 20, boxY + 80, boxW - 40, 40, LIME);
+
+    // Message text with blinking cursor (only when both nodes selected)
+    if (comp.SourceNodeId != 0 && comp.DestinationNodeId != 0) {
+        std::string displayText = comp.Content;
+        if (static_cast<int>(GetTime() * 2) % 2 == 0) {
+            displayText += "|";
+        }
+        DrawText(displayText.c_str(), boxX + 25, boxY + 90, 16, LIME);
+    } else {
+        DrawText("(select nodes first)", boxX + 25, boxY + 90, 16, DARKGREEN);
+    }
+
+    // Instructions and timeout counter
+    const int timeLeft = static_cast<int>(comp.InputTimeout - comp.TimeSinceLastInput);
+    std::string instructions;
+    if (comp.SourceNodeId == 0) {
+        instructions = "Click source node  |  ESC to cancel";
+    } else if (comp.DestinationNodeId == 0) {
+        instructions = "Click destination node  |  ESC to cancel";
+    } else {
+        instructions = "ENTER to send  |  ESC to cancel  |  Timeout: " + std::to_string(timeLeft) + "s";
+    }
+    DrawText(instructions.c_str(), boxX + 20, boxY + 140, 14, LIGHTGRAY);
+    DrawText(("Chars: " + std::to_string(comp.Content.length()) + "/100").c_str(), boxX + 20, boxY + 162, 14, LIGHTGRAY);
 }

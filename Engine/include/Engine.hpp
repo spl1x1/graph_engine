@@ -47,6 +47,8 @@ class Engine{
     void ZoomCamera();
     void MoveCamera(const Vec2 LastMousePosition);
 
+    MessageCompositionState& GetMessageCompState();
+
     static void DrawSandbox();
     static void ProcessInput();
 
@@ -71,6 +73,12 @@ public:
     static std::vector<INode*> GetAllNodes();
     static std::optional<SelectedNodes> ConsumeMessageSelection();
     static void FlashEdgeBetween(uint16_t nodeA, uint16_t nodeB, float durationSeconds = 0.3f);
+
+    void StartMessageComposition();
+    void CancelMessageComposition();
+    void HandleMessageInput();
+    void SendComposedMessage();
+    void DrawMessageCompositionUI();
 };
 
 #endif // ENGINE_HPP

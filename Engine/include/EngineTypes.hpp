@@ -84,12 +84,22 @@ struct InputBlock{
     };
 };
 
+struct MessageCompositionState {
+    bool Active{false};
+    uint16_t SourceNodeId{0};
+    uint16_t DestinationNodeId{0};
+    std::string Content;
+    float InputTimeout{5.0f};
+    float TimeSinceLastInput{0.0f};
+};
+
 struct SandboxData{
     Vec2 Camera;
     float Zoom;
     EditMode Edit;
     bool TextInputActive{false};
     bool ShowSpeed{false};
+    MessageCompositionState MessageComp;
 };
 
 
