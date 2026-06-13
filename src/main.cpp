@@ -48,9 +48,13 @@ int main() {
         .HoverColor = LIGHTGRAY,
         .Text = "Sync LSDB",
         .OnClick = [](){
-            for (INode* node : Engine::GetAllNodes()) {
-                if (auto* router = dynamic_cast<Router*>(node)) {
-                    router->SyncWithNetwork();
+            bool anyUpdates = true;
+            while (anyUpdates) {
+                anyUpdates = false;
+                for (INode* node : Engine::GetAllNodes()) {
+                    if (auto* router = dynamic_cast<Router*>(node)) {
+                        if (router->SyncWithNetwork() > 0) anyUpdates = true;
+                    }
                 }
             }
         }
@@ -106,9 +110,13 @@ int main() {
                 return;
             }
 
-            for (INode* node : Engine::GetAllNodes()) {
-                if (auto* router = dynamic_cast<Router*>(node)) {
-                    router->SyncWithNetwork();
+            bool anyUpdates = true;
+            while (anyUpdates) {
+                anyUpdates = false;
+                for (INode* node : Engine::GetAllNodes()) {
+                    if (auto* router = dynamic_cast<Router*>(node)) {
+                        if (router->SyncWithNetwork() > 0) anyUpdates = true;
+                    }
                 }
             }
 

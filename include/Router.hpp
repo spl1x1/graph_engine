@@ -31,7 +31,7 @@ public:
     void InitializeLSDB();
     void PrintTopologyDatabase() const;
     void PrintLSDBStatistics() const;
-    void SyncWithNetwork();
+    uint32_t SyncWithNetwork();
 };
 
 

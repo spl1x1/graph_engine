@@ -163,13 +163,13 @@ void Router::OnEdgeAdded(INode* neighbor, const Edge& edge) {
     SyncWithNetwork();
 }
 
-void Router::SyncWithNetwork() {
-    if (Data.Network == nullptr) return;
+uint32_t Router::SyncWithNetwork() {
+    if (Data.Network == nullptr) return 0;
 
-    const LinkStateAdvertisement* myLSA = topology.GetLSA(Data.Id);
-    if (myLSA == nullptr) {
-        std::cout << "Router " << Data.Id << ": no local LSA to flood\n";
-        return;
+    const auto& allLSAs = topology.GetAllLSAs();
+    if (allLSAs.empty()) {
+        std::cout << "Router " << Data.Id << ": no LSAs to flood\n";
+        return 0;
     }
 
     const auto& neighbors = topology.GetNeighbors();
@@ -183,17 +183,18 @@ void Router::SyncWithNetwork() {
         if (neighborId == Data.Id) continue;
         INode* neighborNode = Data.Network->GetNode(neighborId);
         if (auto* neighborRouter = dynamic_cast<Router*>(neighborNode)) {
-            if (neighborRouter->GetLSDB().AddOrUpdateLSA(*myLSA)) {
-                neighborRouter->GetLSDB().AddNeighbor(Data.Id);
-                std::cout << "   → Flooded LSA (seq=" << myLSA->GetSequenceNumber()
-                          << ") to Router " << neighborId << "\n";
-                flooded++;
-            } else {
-                std::cout << "   ✗ Router " << neighborId << " rejected LSA (duplicate/stale)\n";
+            for (const auto& [routerId, lsa] : allLSAs) {
+                if (neighborRouter->GetLSDB().AddOrUpdateLSA(lsa)) {
+                    neighborRouter->GetLSDB().AddNeighbor(Data.Id);
+                    std::cout << "   → Flooded LSA (router=" << routerId << ", seq=" << lsa.GetSequenceNumber()
+                              << ") to Router " << neighborId << "\n";
+                    flooded++;
+                }
             }
         }
     }
 
-    std::cout << "✓ Flooded to " << flooded << " / " << neighbors.size() << " neighbor(s)\n";
+    std::cout << "✓ Flooded " << flooded << " LSA(s) to " << neighbors.size() << " neighbor(s)\n";
     std::cout << std::string(70, '=') << "\n\n";
+    return flooded;
 }
