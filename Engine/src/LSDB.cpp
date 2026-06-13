@@ -172,6 +172,7 @@ void LSDB::Initialize(uint16_t routerId) {
     LocalRouterId = routerId;
     database.clear();
     NeighborRouterIds.clear();
+    lastFloodedLSAs.clear();
     statistics = {};
     statistics.LastUpdateTime = time(nullptr);
 }
@@ -323,16 +324,84 @@ uint32_t LSDB::FlushStaleAdvertisements(uint16_t maxAge) {
     return removed;
 }
 
+LinkStateAdvertisement LSDB::CreateLocalLSA(const std::vector<LinkStateEntry>& localLinks) {
+    LinkStateAdvertisement localLSA(LocalRouterId);
+    
+    for (const auto& link : localLinks) {
+        localLSA.AddLink(link);
+    }
+    
+    localLSA.IncrementSequenceNumber();
+    localLSA.ResetAge();
+    localLSA.CalculateChecksum();
+    
+    return localLSA;
+}
+
+std::vector<uint16_t> LSDB::FloodLSA(const LinkStateAdvertisement& lsa) {
+    std::vector<uint16_t> floodedNeighbors;
+    
+    std::cout << "📡 Flooding LSA from Router " << lsa.GetOriginatingRouterId() 
+              << " to " << NeighborRouterIds.size() << " neighbors\n";
+    
+    // In a real implementation, you would send LSA packets to each neighbor
+    // For simulation, we mark LSA as flooded and increment statistics
+    for (uint16_t neighborId : NeighborRouterIds) {
+        std::cout << "   → Sending to neighbor: " << neighborId << "\n";
+        floodedNeighbors.push_back(neighborId);
+        statistics.TotalLSAsFlooded++;
+    }
+    
+    lastFloodTime = time(nullptr);
+    lastFloodedLSAs.insert(lsa.GetOriginatingRouterId());
+    
+    return floodedNeighbors;
+}
+
 std::vector<LinkStateAdvertisement> LSDB::GetLSAsToFlood() const {
     std::vector<LinkStateAdvertisement> toFlood;
     
     for (const auto& [routerId, lsa] : database) {
-        // In a real implementation, you would track which LSAs are newly received
-        // For now, we return all LSAs (or implement a separate tracking mechanism)
+        // Return all LSAs (in a real implementation, you would track newly received ones)
         toFlood.push_back(lsa);
     }
     
     return toFlood;
+}
+
+std::vector<LinkStateAdvertisement> LSDB::GetNewLSAsToFlood() const {
+    std::vector<LinkStateAdvertisement> newLSAs;
+    
+    for (const auto& [routerId, lsa] : database) {
+        // Return LSAs that haven't been recently flooded
+        if (lastFloodedLSAs.find(routerId) == lastFloodedLSAs.end()) {
+            newLSAs.push_back(lsa);
+        }
+    }
+    
+    return newLSAs;
+}
+
+uint32_t LSDB::SyncWithNeighbors() {
+    uint32_t lsasFlooded = 0;
+    
+    std::cout << "\n" << std::string(70, '=') << "\n";
+    std::cout << "🔄 NETWORK SYNCHRONIZATION - Router " << LocalRouterId << "\n";
+    std::cout << std::string(70, '=') << "\n";
+    
+    // Flood all LSAs in the database to neighbors
+    for (const auto& [routerId, lsa] : database) {
+        if (FloodLSA(lsa).size() > 0) {
+            lsasFlooded++;
+        }
+    }
+    
+    std::cout << "✓ Synchronization complete. " << lsasFlooded 
+              << " LSAs flooded to " << NeighborRouterIds.size() 
+              << " neighbors\n";
+    std::cout << std::string(70, '=') << "\n\n";
+    
+    return lsasFlooded;
 }
 
 const LSDB::LSDBStats& LSDB::GetStatistics() const {
