@@ -351,9 +351,16 @@ void Engine::ProcessKeyboard(){
     if (IsKeyPressed(KEY_R)) {
         instance->sandboxData->Edit.SelectedMode.clear();
         instance->nodes.ClearSelectedNodes();
+        sandboxData->Edit.MessageBuffer.clear();
     }
-    if (IsKeyPressed(KEY_T)) {
+    if (IsKeyPressed(KEY_ENTER)) {
         instance->sandboxData->TextInputActive = true;
+        instance->sandboxData->Edit.MessageBuffer.clear();
+    }
+    if(IsKeyPressed(KEY_C)){
+        instance->sandboxData->Camera[0] = 0;
+        instance->sandboxData->Camera[1] = 0;
+        instance->sandboxData->Zoom = 1.0f;
     }
     if (IsKeyPressed(KEY_H)) {
         sandboxData->ShowSpeed = !sandboxData->ShowSpeed;
@@ -373,24 +380,21 @@ void Engine::ResetInputBlock() {
 
 void Engine::ProcessTextInput(){
     if (!sandboxData->TextInputActive) return;
-
+    if (IsKeyPressed(KEY_ENTER)) {sandboxData->TextInputActive = false;};
+    if (IsKeyPressed(KEY_BACKSPACE) && !sandboxData->Edit.MessageBuffer.empty()) {
+        sandboxData->Edit.MessageBuffer.pop_back();
+    }
     instance->inputBlock = {
       .Blocked = true,
       .BlockLoop = 1, //Block input for one loop to prevent processing other inputs while typing
       .Type = InputBlock::BlockType::TextInput,
     };
 
-    static std::string buffer;
     int key = GetCharPressed();
     while (key > 0) {
-        buffer += static_cast<char>(key);
+        sandboxData->Edit.MessageBuffer += static_cast<char>(key);
         key = GetCharPressed();
-        if (IsKeyPressed(KEY_T)) {sandboxData->TextInputActive = false;};
     }
-    if (buffer.empty()) return;
-
-    std::cout << "Text input: " << buffer << "\n";
-    buffer.clear();
 };
 
 
@@ -457,6 +461,11 @@ void Engine::DrawUI() {
             + " Delta Time: "
             + std::to_string(GetFrameTime()));
     };
+    const auto MessageBufferString = [](SandboxData &data)-> std::string {
+        return ("Message Buffer: "
+            + data.Edit.MessageBuffer);
+    };
+    auto messageBufferPosY{160.0f};
 
     auto DrawEditData = [&] {
         const auto mode{instance->sandboxData->Edit.SelectedMode};
@@ -470,6 +479,7 @@ void Engine::DrawUI() {
         for (const auto nodetype: instance->NodeFactory | std::views::keys) {
             Widget::Draw(nodetype);
         }
+        messageBufferPosY = 160 + 30 * static_cast<float>(instance->NodeFactory.size() + 1);
     };
 
     DrawText(CameraPosString(*instance->sandboxData).c_str(), 10, 10, 20, WHITE);
@@ -477,9 +487,14 @@ void Engine::DrawUI() {
     DrawText(EnvInfoString().c_str(), 10, 70, 20, WHITE);
 
     if (instance->sandboxData->Edit.Enabled) DrawEditData();
-    else DrawText("Press E to enter edit mode | Press R to clear selected", 10, 100, 20, GREEN);
+    else DrawText("E - edit mode | R - clear selected | ENTER - message buffer", 10, 100, 20, GREEN);
+
+    DrawText(MessageBufferString(*instance->sandboxData).c_str(), 10, messageBufferPosY, 20, WHITE);
+    if (instance->sandboxData->TextInputActive) {
+        const auto BufferInfo {"Press ENTER to finish typing | Backspace to delete"};
+        DrawText(BufferInfo, 10, messageBufferPosY + 30, 20, GREEN);
+    }
     Widget::Draw("ClearButton");
-    Widget::Draw("SyncButton");
 }
 
 void Engine::DrawMenuGUI(){

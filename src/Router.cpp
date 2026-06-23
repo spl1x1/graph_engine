@@ -1,7 +1,6 @@
 #include "Router.hpp"
 #include "Node.hpp"
 #include <iostream>
-#include <iomanip>
 
 //Router
 
@@ -27,7 +26,7 @@ Vec2 Router::GetScreenPosition(const Vec2 Camera) const{
 
 void Router::SendMessage(Message message){
     if (Data.Network == nullptr) {
-        std::cerr << "Error: Router with id " << Data.Id << " is not connected to a network. Message not sent." << std::endl;
+        std::cerr << "Error: Router with id " << Data.Id << " is not connected to a network. Message not sent. \n";
         return;
     };
     message.SenderAddress = Data.Address;
@@ -111,9 +110,7 @@ void Router::PrintLSDBStatistics() const {
 
 void Router::NodeClicked() {
 
-    std::cout << "\n╔════════════════════════════════════════════════════════════════════╗\n";
-    std::cout << "║                    ROUTER CLICK EVENT                               ║\n";
-    std::cout << "╚════════════════════════════════════════════════════════════════════╝\n";
+    std::cout << "\n════════════════════════════════════════════════════════════════════\n";
 
     // Basic router information
     std::cout << "Router ID: " << Data.Id << "\n";
@@ -156,7 +153,7 @@ void Router::OnEdgeAdded(INode* neighbor, const Edge& edge) {
     topology.AddOrUpdateLSA(updatedLSA);
     topology.AddNeighbor(neighbor->GetData().Id);
 
-    std::cout << "🔗 Router " << Data.Id << " registered new link to Router "
+    std::cout << "Router " << Data.Id << " registered new link to Router "
               << neighbor->GetData().Id << " (edge " << edge.Key.Id << ")\n";
 
     // Flood own LSA to all known neighbors
@@ -195,7 +192,7 @@ void Router::OnEdgeRemoved(INode* neighbor, const Edge& edge) {
         topology.RemoveNeighbor(neighborId);
     }
 
-    std::cout << "🔌 Router " << Data.Id << " removed link to Router "
+    std::cout << "Router " << Data.Id << " removed link to Router "
               << neighborId << " (edge " << edge.Key.Id << ")\n";
 
     // Flood updated LSA to remaining neighbors
@@ -215,7 +212,7 @@ uint32_t Router::SyncWithNetwork() {
     uint32_t flooded = 0;
 
     std::cout << "\n" << std::string(70, '=') << "\n";
-    std::cout << "📡 FLOOD - Router " << Data.Id << " → " << neighbors.size() << " neighbor(s)\n";
+    std::cout << "FLOOD - Router " << Data.Id << " → " << neighbors.size() << " neighbor(s)\n";
     std::cout << std::string(70, '=') << "\n";
 
     for (uint16_t neighborId : neighbors) {

@@ -12,8 +12,8 @@ int main(int argc, char *argv[]) {
     constexpr int windowWidth = 860;
     constexpr int windowHeight = 640;
 
-    constexpr int sandboxWidth = 2000;
-    constexpr int sandboxHeight = 2000;
+    constexpr int sandboxWidth = 4000;
+    constexpr int sandboxHeight = 4000;
 
     constexpr float sandboxCenterX = sandboxWidth / 2.f - windowWidth / 2.f;
     constexpr float sandboxCenterY = sandboxHeight / 2.f - windowHeight / 2.f;
@@ -38,35 +38,11 @@ int main(int argc, char *argv[]) {
     std::string saveFile{argc > 1 ? argv[1] : ""};
     Engine::InitSave(saveFile);
 
-    // Register Sync LSDB button – floods LSAs to all neighbors of the selected router
-    WidgetData syncWidgetData{
+    //Register Send Message Button
+    WidgetData sendWidgetData{
         .PosX = 170.0f,
         .PosY = 130.0f,
-        .Width = 120.0f,
-        .Height = 20.0f,
-        .Border = {0.0f, WHITE}
-    };
-    ButtonData syncButtonData{
-        .HoverColor = LIGHTGRAY,
-        .Text = "Sync LSDB",
-        .OnClick = [](){
-            bool anyUpdates = true;
-            while (anyUpdates) {
-                anyUpdates = false;
-                for (INode* node : Engine::GetAllNodes()) {
-                    if (auto* router = dynamic_cast<Router*>(node)) {
-                        if (router->SyncWithNetwork() > 0) anyUpdates = true;
-                    }
-                }
-            }
-        }
-    };
-    Widget::Register("SyncButton", std::make_unique<Button>(syncWidgetData, syncButtonData));
-
-    WidgetData sendWidgetData{
-        .PosX = 300.0f,
-        .PosY = 130.0f,
-        .Width = 140.0f,
+        .Width = 150.0f,
         .Height = 20.0f,
         .Border = {0.0f, WHITE}
     };
@@ -75,7 +51,7 @@ int main(int argc, char *argv[]) {
         .Text = "Send Message",
         .OnClick = [&sandboxData](){
             sandboxData.Edit.SelectedMode = "SEND_MESSAGE";
-            std::cout << "📨 Message mode enabled. Click source router, then destination router.\n";
+            std::cout << "Message mode enabled. Click source router, then destination router.\n";
         }
     };
     Widget::Register("SendMessageButton", std::make_unique<Button>(sendWidgetData, sendButtonData));
@@ -103,8 +79,9 @@ int main(int argc, char *argv[]) {
             auto selection = Engine::ConsumeMessageSelection();
             if (!selection.has_value()) return;
 
-            const uint16_t sourceId = selection->NodeA;
-            const uint16_t destinationId = selection->NodeB;
+            const auto sourceId{selection->NodeA};
+            const auto destinationId{selection->NodeB};
+
             Router* sourceRouter = GetRouterById(sourceId);
             Router* destinationRouter = GetRouterById(destinationId);
             if (sourceRouter == nullptr || destinationRouter == nullptr) {
@@ -128,21 +105,13 @@ int main(int argc, char *argv[]) {
                 return;
             }
 
-            std::cout << "Enter message from Router " << sourceId << " to Router " << destinationId << ": ";
-            std::string content;
-            std::getline(std::cin >> std::ws, content);
-            if (content.empty()) {
-                std::cout << "❌ Empty message ignored.\n";
-                return;
-            }
-
             inFlight.path = path;
-            inFlight.content = content;
+            inFlight.content = sandboxData.Edit.MessageBuffer.empty() ? "Ping from Router " + std::to_string(sourceId) : sandboxData.Edit.MessageBuffer;
             inFlight.hopIndex = 0;
             inFlight.nextHopDelay = 0.0f;
             inFlight.active = true;
             sourceRouter->GetData().FlashTimer = 0.25f;
-            std::cout << "🚀 Message queued on path: ";
+            std::cout << "Message queued on path: ";
             for (auto id : path) std::cout << id << " ";
             std::cout << "\n";
             return;
@@ -188,7 +157,7 @@ int main(int argc, char *argv[]) {
             destinationData.LastDeliveredMessage = inFlight.content;
             destinationData.DeliveredMessageTimer = 6.0f;
             destinationData.FlashTimer = 0.4f;
-            std::cout << "✅ Message arrived at Router " << toId << ": " << inFlight.content << "\n";
+            std::cout << "Message arrived at Router " << toId << ": " << inFlight.content << "\n";
             inFlight.active = false;
         }
     });

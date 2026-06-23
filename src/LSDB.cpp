@@ -1,12 +1,12 @@
 #include <LSDB.hpp>
 #include <iostream>
-#include <numeric>
 #include <cstring>
 #include <iomanip>
 #include <limits>
 #include <queue>
+#include <algorithm>
 
-// ==================== LinkStateAdvertisement Implementation ====================
+
 
 LinkStateAdvertisement::LinkStateAdvertisement(uint16_t routerId) 
     : OriginatingRouterId(routerId) {

@@ -1,4 +1,3 @@
-#include "EngineTypes.hpp"
 #include <Node.hpp>
 #include <algorithm>
 #include <cstddef>
@@ -39,7 +38,7 @@ void BasicNodeOperations::SendMessage(Message message, class NodeNetwork& nodes)
 
     auto it = std::find(senderNode->GetData().Edges.begin(), senderNode->GetData().Edges.end(), receiverNode->GetData().Id);
     if (it == senderNode->GetData().Edges.end()) {
-        std::cout << "NodeNetwork " << senderNode->GetData().Id << " and " << receiverNode->GetData().Id << " are not directly connected. Message cannot be sent." << std::endl;
+        std::cout << "NodeNetwork " << senderNode->GetData().Id << " and " << receiverNode->GetData().Id << " are not directly connected ..." << std::endl;
         return;
     };
 
@@ -294,7 +293,6 @@ bool NodeNetwork::ProcessNodeClick(const Vec2 MousePos, Event::Click clickEvent)
             ClearSelectedNodes();
         }
     }
-    //Pridat vektor pro ukládání dvou kliknutých uzlů pro přidání hrany
     return true;
 }
 

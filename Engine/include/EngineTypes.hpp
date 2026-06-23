@@ -46,6 +46,7 @@ struct Enviroment{
 struct EditMode{
     bool Enabled;
     std::string SelectedMode;
+    std::string MessageBuffer;
     IPAddress SelectedNetworkArea;
     LinkSpeed SelectedSpeed{LinkSpeed::MEDIUM};
 };
