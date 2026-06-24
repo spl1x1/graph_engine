@@ -96,10 +96,7 @@ Načte topologii z `my_network.json` nebo vytvoří nový soubor.
 ## 💾 Používání Save systému
 
 ### Automatické ukládání
-Program automaticky ukládá stav při určité akci (klávesa pro save). Konzole vypíše:
-```
-Saving sandbox!
-```
+Program ukládá stav při určité akci (klávesa ESC).
 
 ### Formát save souboru
 Save soubor je v JSON formátu:
@@ -199,8 +196,8 @@ graph_engine/
 
 ## 🔧 Konvence kódu
 
-- **Public** metody a data jsou psány velkými písmeny (PascalCase)
-- **Private** metody a data jsou psány malými písmeny (camelCase)
+- **Public** metody a data jsou psány velkými písmeny
+- **Private** metody a data jsou psány malými písmeny
 
 Příklad:
 ```cpp
@@ -214,8 +211,6 @@ private:
     uint16_t routerId;         // Private - malé
 };
 ```
-
-## 📝 Poznámky
 
 - Engine používá **singleton pattern** pro hlavní Engine třídu
 - **Raylib** zajišťuje rendering a window management
