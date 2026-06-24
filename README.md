@@ -85,6 +85,12 @@ Release\EngineExecutable.exe
 ```bash
 ./EngineExecutable
 ```
+nebo
+```bash
+./EngineExecutable ../save.json
+```
+Pro načtení předpřipravené sítě v root directory
+
 Program se spustí s defaultním `save.json` souborem. Pokud soubor neexistuje, vytvoří se prázdný.
 
 ### Spuštění s vlastním save souborem
