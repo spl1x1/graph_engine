@@ -64,7 +64,6 @@ cmake --build .
 ```
 
 #### Windows (Visual Studio)
-Využití Ninja generátoru pro rychlejší build, je nutné mít nainstalovaný a správně nakonfigurovaný Ninja a CMake.
 ```bash
 # Vytvoření build složky
 mkdir build
