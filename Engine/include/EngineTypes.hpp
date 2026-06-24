@@ -13,6 +13,9 @@ bool operator==(Vec2 vec, Vector2 RaylibVec2);
 Vec2 ConvertRayVec2(Vector2 RaylibVec2);
 float GetDistance(Vec2 a, Vec2 b);
 
+#ifdef _WIN32
+    using uint = uint32_t;
+#endif
 
 struct EnvWindow{
     uint Width;
