@@ -72,21 +72,7 @@ public:
     void PrintLSA() const;
 };
 
-/**
- * @class LinkStateDatabase (LSDB)
- * @brief Complete database of link state advertisements for a node
- *
- * The LSDB maintains:
- * - A collection of LSAs from all known routers
- * - Topology information for route calculation
- * - Methods to add, update, and query LSAs
- * - Support for flooding new LSAs to neighbors
- *
- * This class is designed to be composed into each node via composition,
- * allowing each node to maintain its own view of the network topology.
- */
 class LSDB {
-private:
     uint16_t LocalRouterId{0};
     std::map<uint16_t, LinkStateAdvertisement> database;  // Key: Originating Router ID
     std::set<uint16_t> NeighborRouterIds;
@@ -108,6 +94,7 @@ public:
 
     // Initialization
     void Initialize(uint16_t routerId);
+    void SetLocalRouterId(uint16_t routerId);
 
     // LSA Management
     bool AddOrUpdateLSA(const LinkStateAdvertisement& lsa);

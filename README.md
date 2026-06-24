@@ -64,6 +64,7 @@ cmake --build .
 ```
 
 #### Windows (Visual Studio)
+Využití Ninja generátoru pro rychlejší build, je nutné mít nainstalovaný a správně nakonfigurovaný Ninja a CMake.
 ```bash
 # Vytvoření build složky
 mkdir build
@@ -82,21 +83,29 @@ Release\EngineExecutable.exe
 ## 🚀 Spuštění
 
 ### Základní spuštění
+Linux/macOS
 ```bash
 ./EngineExecutable
 ```
-nebo
+
+Windows
 ```bash
-./EngineExecutable ../save.json
+Release\EngineExecutable.exe
 ```
+
 Pro načtení předpřipravené sítě v root directory
 
-Program se spustí s defaultním `save.json` souborem. Pokud soubor neexistuje, vytvoří se prázdný.
+Program se spustí s defaultním `save.json` souborem. Pokud soubor neexistuje, vytvoří se prázdný. Pokud chcete použít vlastní save soubor, zadejte jeho název jako argument při spuštění.
 
 ### Spuštění s vlastním save souborem
 ```bash
 ./EngineExecutable my_network.json
 ```
+Popřípadě Windows:
+```bash
+Release\EngineExecutable.exe my_network.json
+```
+
 Načte topologii z `my_network.json` nebo vytvoří nový soubor.
 
 ## 💾 Používání Save systému

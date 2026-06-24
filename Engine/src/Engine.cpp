@@ -160,7 +160,7 @@ void Engine::InitSave(const std::string& saveFile) {
 void Engine::Loop() {
     auto CallUpdateFunctions = []() {
         for (const auto& func: instance->UpdateFunctions) {
-            func();
+             func();
         }
     };
 

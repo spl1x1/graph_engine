@@ -5,6 +5,7 @@
 #include <memory>
 #include <optional>
 #include <queue>
+#include <string>
 #include <unordered_map>
 #include <vector>
 #include <cstdint>
@@ -143,6 +144,8 @@ public:
     virtual void OnEdgeAdded(INode* neighbor, const Edge& edge) {}
     virtual void OnEdgeRemoved(INode* neighbor, const Edge& edge) {}
 
+    // Called by NodeNetwork::SyncNetwork() to propagate LSAs; returns number of newly flooded LSAs
+    virtual uint32_t NetworkSync() { return 0; }
 
     virtual ~INode() = default;
 
@@ -180,6 +183,9 @@ public:
 
     void AddEdge(EdgeData edge);
     void RemoveEdge(const uint16_t id);
+    // Runs a network-wide LSA sync loop until all routers have converged (no new floods).
+    // Called automatically after edge changes to ensure full LSA propagation.
+    void SyncNetwork();
 
     INode* GetNode(const uint16_t id) const;
     INode* GetNode(const IPAddress address) const;

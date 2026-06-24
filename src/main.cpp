@@ -6,6 +6,7 @@
 #include "Node.hpp"
 #include "Router.hpp"
 #include <Button.hpp>
+#include <filesystem>
 #include <Widget.hpp>
 
 int main(int argc, char *argv[]) {
@@ -18,8 +19,13 @@ int main(int argc, char *argv[]) {
     constexpr float sandboxCenterX = sandboxWidth / 2.f - windowWidth / 2.f;
     constexpr float sandboxCenterY = sandboxHeight / 2.f - windowHeight / 2.f;
 
+    std::filesystem::path backgroundPath = std::filesystem::current_path() / "assets" / "nebula_background.png";
+    if (!std::filesystem::exists(backgroundPath)) {
+        backgroundPath = std::filesystem::current_path().parent_path() / "assets" / "nebula_background.png";
+    }
+
     Enviroment env = {
-        .Bg = {"assets/nebula_background.png"},
+        .Bg = {backgroundPath.string()},
         .Window = {windowWidth, windowHeight, 60},
         .Sandbox = {sandboxWidth, sandboxHeight},
         .Title = "Graph Engine",
@@ -90,15 +96,6 @@ int main(int argc, char *argv[]) {
                 return;
             }
 
-            bool anyUpdates = true;
-            while (anyUpdates) {
-                anyUpdates = false;
-                for (INode* node : Engine::GetAllNodes()) {
-                    if (auto* router = dynamic_cast<Router*>(node)) {
-                        if (router->SyncWithNetwork() > 0) anyUpdates = true;
-                    }
-                }
-            }
 
             const auto path = sourceRouter->GetLSDB().GetShortestPath(sourceId, destinationId);
             if (path.size() < 2) {

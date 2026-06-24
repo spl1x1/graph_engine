@@ -203,17 +203,10 @@ uint32_t Router::SyncWithNetwork() {
     if (Data.Network == nullptr) return 0;
 
     const auto& allLSAs = topology.GetAllLSAs();
-    if (allLSAs.empty()) {
-        std::cout << "Router " << Data.Id << ": no LSAs to flood\n";
-        return 0;
-    }
+    if (allLSAs.empty()) return 0;
 
     const auto& neighbors = topology.GetNeighbors();
     uint32_t flooded = 0;
-
-    std::cout << "\n" << std::string(70, '=') << "\n";
-    std::cout << "FLOOD - Router " << Data.Id << " → " << neighbors.size() << " neighbor(s)\n";
-    std::cout << std::string(70, '=') << "\n";
 
     for (uint16_t neighborId : neighbors) {
         if (neighborId == Data.Id) continue;
@@ -222,15 +215,20 @@ uint32_t Router::SyncWithNetwork() {
             for (const auto& [routerId, lsa] : allLSAs) {
                 if (neighborRouter->GetLSDB().AddOrUpdateLSA(lsa)) {
                     neighborRouter->GetLSDB().AddNeighbor(Data.Id);
-                    std::cout << "   → Flooded LSA (router=" << routerId << ", seq=" << lsa.GetSequenceNumber()
-                              << ") to Router " << neighborId << "\n";
+                    std::cout << "   [FLOOD] Router " << Data.Id
+                              << " → Router " << neighborId
+                              << "  LSA(router=" << routerId
+                              << ", seq=" << lsa.GetSequenceNumber() << ")\n";
                     flooded++;
                 }
             }
         }
     }
 
-    std::cout << "✓ Flooded " << flooded << " LSA(s) to " << neighbors.size() << " neighbor(s)\n";
-    std::cout << std::string(70, '=') << "\n\n";
     return flooded;
 }
+
+uint32_t Router::NetworkSync() {
+    return SyncWithNetwork();
+}
+

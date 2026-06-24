@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <memory>
 #include <iostream>
+#include <string>
 #include <ranges>
 
 double GetSpeedMbps(LinkSpeed speed = LinkSpeed::MEDIUM) {
@@ -203,6 +204,9 @@ void NodeNetwork::AddEdge(EdgeData edge){
     const Edge& storedEdge = edges.at(key.Id);
     GetNode(edge.NodeA)->OnEdgeAdded(GetNode(edge.NodeB), storedEdge);
     GetNode(edge.NodeB)->OnEdgeAdded(GetNode(edge.NodeA), storedEdge);
+
+    // Guarantee full LSA propagation across all routers after topology change
+    SyncNetwork();
 }
 
 void NodeNetwork::RemoveEdge(const uint16_t id){
@@ -225,6 +229,9 @@ void NodeNetwork::RemoveEdge(const uint16_t id){
     // Notify both nodes so they can update their topology databases
     nodeA->OnEdgeRemoved(nodeB, edge);
     nodeB->OnEdgeRemoved(nodeA, edge);
+
+    // Re-sync the whole network so everyone learns about the removed link
+    SyncNetwork();
 }
 
 INode* NodeNetwork::GetNode(const uint16_t id) const {
@@ -365,3 +372,15 @@ void NodeNetwork::FlashEdgeBetween(uint16_t nodeA, uint16_t nodeB, float duratio
         }
     }
 }
+
+void NodeNetwork::SyncNetwork() {
+    bool anyUpdates = true;
+    while (anyUpdates) {
+        anyUpdates = false;
+        for (const auto& [id, node] : nodes) {
+            if (node && node->NetworkSync() > 0)
+                anyUpdates = true;
+        }
+    }
+}
+

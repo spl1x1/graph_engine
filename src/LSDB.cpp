@@ -188,13 +188,11 @@ bool LSDB::AddOrUpdateLSA(const LinkStateAdvertisement& lsa) {
         // Compare sequence numbers
         if (lsa.GetSequenceNumber() < it->second.GetSequenceNumber()) {
             statistics.StaleAdversmentRejections++;
-            std::cerr << "Rejecting stale LSA from router " << routerId << "\n";
             return false;
         }
         
         if (lsa.GetSequenceNumber() == it->second.GetSequenceNumber()) {
             statistics.DuplicateAdversmentRejections++;
-            std::cout << "Duplicate LSA from router " << routerId << " (same sequence number)\n";
             return false;
         }
     }
@@ -202,9 +200,6 @@ bool LSDB::AddOrUpdateLSA(const LinkStateAdvertisement& lsa) {
     database[routerId] = lsa;
     statistics.TotalLSAsReceived++;
     statistics.LastUpdateTime = time(nullptr);
-    
-    // Add router as neighbor if not already present
-    AddNeighbor(routerId);
     
     return true;
 }
@@ -446,7 +441,7 @@ uint32_t LSDB::SyncWithNeighbors() {
     uint32_t lsasFlooded = 0;
     
     std::cout << "\n" << std::string(70, '=') << "\n";
-    std::cout << "🔄 NETWORK SYNCHRONIZATION - Router " << LocalRouterId << "\n";
+    std::cout << "NETWORK SYNCHRONIZATION - Router " << LocalRouterId << "\n";
     std::cout << std::string(70, '=') << "\n";
     
     // Flood all LSAs in the database to neighbors

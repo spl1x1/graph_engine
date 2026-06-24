@@ -3,7 +3,6 @@ cmake_minimum_required(VERSION 3.10)
 Project(GraphEngine)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_LINK_WARNING_AS_ERROR ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 
@@ -34,6 +33,13 @@ add_custom_target(copy_assets ALL
         "../assets"
         "${CMAKE_BINARY_DIR}/assets"
         COMMENT "Copying assets directory")
+
+add_custom_target(copy_save ALL
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/save.json"
+        "${CMAKE_BINARY_DIR}/save.json"
+        COMMENT "Copying save file"
+)
 
 
 #Library and executable definitions
@@ -91,4 +97,4 @@ target_link_libraries(EngineExecutable
     PRIVATE EngineLib
 )
 
-add_dependencies(EngineExecutable copy_assets)
+add_dependencies(EngineExecutable copy_assets copy_save)

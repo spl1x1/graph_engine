@@ -33,6 +33,9 @@ public:
     void PrintTopologyDatabase() const;
     void PrintLSDBStatistics() const;
     uint32_t SyncWithNetwork();
+
+    // Called by NodeNetwork::SyncNetwork(); delegates to SyncWithNetwork()
+    virtual uint32_t NetworkSync() override;
 };
 
 

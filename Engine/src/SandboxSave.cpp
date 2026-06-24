@@ -24,11 +24,18 @@ void SandboxSave::Init(std::string saveFile, SandboxVariablePointers pointers) {
     }
 
     instance->saveFile = saveFile;
-    auto currentPath = std::filesystem::path(saveFile);
-    if (!std::filesystem::exists(currentPath)) {
+
+
+    std::filesystem::path save = std::filesystem::current_path() / saveFile;
+    if (!std::filesystem::exists(save)) {
+        save = std::filesystem::current_path().parent_path() / saveFile;
+    }
+    if (!std::filesystem::exists(save)) {
+        std::cerr << "Warning: Save file " << saveFile << " does not exist. A new save file will be created." << std::endl;
         std::fstream(saveFile, std::ios::out | std::ios::trunc).close();
         return;
     }
+    else instance->saveFile = save.string();
 
     instance->Load();
 }
@@ -150,6 +157,10 @@ void SandboxSave::Load() {
 
         data.Network->AddEdge(edgeData);
     }
+
+    // After all topology is restored, run a full network-wide sync so every
+    // router has a complete view of the network before any message is sent.
+    data.Network->SyncNetwork();
 
     return;
 }
