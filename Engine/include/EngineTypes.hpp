@@ -87,10 +87,11 @@ struct InputBlock{
 
 struct SandboxData{
     Vec2 Camera;
+    Vec2 BaseCameraPosition;
     float Zoom;
     EditMode Edit;
     bool TextInputActive{false};
-    bool ShowSpeed{false};
+    bool ShowDebug{false};
 };
 
 

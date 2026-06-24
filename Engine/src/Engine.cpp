@@ -25,6 +25,8 @@ Engine::Engine(Enviroment *env, SandboxData *sandboxData) : env(env), sandboxDat
 
 void Engine::Init(Enviroment *env, SandboxData *sandboxData) {
 
+    sandboxData->BaseCameraPosition = sandboxData->Camera;
+
     constexpr int TemplateWidth{150};
     constexpr int TemplateHeight{20};
 
@@ -129,7 +131,6 @@ void Engine::Init(Enviroment *env, SandboxData *sandboxData) {
     Widget::Register("LinkSpeedButton", std::make_unique<Button>(LinkSpeedWidgetData, LinkSpeedButtonData));
     Widget::AddToGroup(
         "EditButtons", {
-        "ClearButton",
         "AddEdgeButton",
         "RemoveNodeButton",
         "AreaOctet1PlusButton",
@@ -138,6 +139,7 @@ void Engine::Init(Enviroment *env, SandboxData *sandboxData) {
         "AreaOctet2MinusButton",
         "LinkSpeedButton"
         });
+    Widget::AddToGroup("BaseButtons","ClearButton");
 }
 
 void Engine::InitSave(const std::string& saveFile) {
@@ -358,12 +360,12 @@ void Engine::ProcessKeyboard(){
         instance->sandboxData->Edit.MessageBuffer.clear();
     }
     if(IsKeyPressed(KEY_C)){
-        instance->sandboxData->Camera[0] = 0;
-        instance->sandboxData->Camera[1] = 0;
+        instance->sandboxData->Camera[0] = instance->sandboxData->BaseCameraPosition[0];
+        instance->sandboxData->Camera[1] = instance->sandboxData->BaseCameraPosition[1];
         instance->sandboxData->Zoom = 1.0f;
     }
     if (IsKeyPressed(KEY_H)) {
-        sandboxData->ShowSpeed = !sandboxData->ShowSpeed;
+        sandboxData->ShowDebug = !sandboxData->ShowDebug;
     }
     if (IsKeyPressed(KEY_ESCAPE)){
         SandboxSave::Save();
@@ -462,16 +464,20 @@ void Engine::DrawUI() {
             + std::to_string(GetFrameTime()));
     };
     const auto MessageBufferString = [](SandboxData &data)-> std::string {
+        const auto bufferData{data.Edit.MessageBuffer.empty() ? "<empty>" : data.Edit.MessageBuffer};
         return ("Message Buffer: "
-            + data.Edit.MessageBuffer);
+            + bufferData);
     };
     auto messageBufferPosY{160.0f};
 
-    auto DrawEditData = [&] {
+    auto DrawSelectedMode = [&] {
         const auto mode{instance->sandboxData->Edit.SelectedMode};
         const auto editText = mode.empty() ? "No mode selected" : "Selected mode: " + mode + " | Press R to clear selection";
 
         DrawText(editText.c_str(), 10, 100, 20, GREEN);
+    };
+    auto DrawEditData = [&] {
+        DrawSelectedMode();
         DrawText((instance->sandboxData->Edit.SelectedNetworkArea.ToString()).c_str(), env->Window.Width - 220, 140, 20, GREEN);
         DrawText((std::format("{:.1f} Mbps", GetSpeedMbps(instance->sandboxData->Edit.SelectedSpeed))).c_str(), env->Window.Width - 220, 190, 20, GREEN);
 
@@ -482,24 +488,28 @@ void Engine::DrawUI() {
         messageBufferPosY = 160 + 30 * static_cast<float>(instance->NodeFactory.size() + 1);
     };
 
-    DrawText(CameraPosString(*instance->sandboxData).c_str(), 10, 10, 20, WHITE);
-    DrawText(MousePosString(*instance->sandboxData).c_str(), 10, 40, 20, WHITE);
-    DrawText(EnvInfoString().c_str(), 10, 70, 20, WHITE);
+    if (instance->sandboxData->ShowDebug) {
+        DrawText(CameraPosString(*instance->sandboxData).c_str(), 10, 10, 20, WHITE);
+        DrawText(MousePosString(*instance->sandboxData).c_str(), 10, 40, 20, WHITE);
+        DrawText(EnvInfoString().c_str(), 10, 70, 20, WHITE);
+    }
+    else{
+        DrawText("Press H to toggle debug info", 10, 10, 20, WHITE);
+        DrawText("Press C to reset camera position and zoom", 10, 40, 20, WHITE);
+        DrawText("Press ESC to save sandbox", 10, 70, 20, WHITE);
+    }
 
     if (instance->sandboxData->Edit.Enabled) DrawEditData();
-    else DrawText("E - edit mode | R - clear selected | ENTER - message buffer", 10, 100, 20, GREEN);
+    else if (instance->sandboxData->Edit.SelectedMode == "SEND_MESSAGE") DrawSelectedMode();
+    else DrawText("E - EDIT MODE | ENTER - EDIT MESSAGE", 10, 100, 20, GREEN);
 
     DrawText(MessageBufferString(*instance->sandboxData).c_str(), 10, messageBufferPosY, 20, WHITE);
     if (instance->sandboxData->TextInputActive) {
         const auto BufferInfo {"Press ENTER to finish typing | Backspace to delete"};
         DrawText(BufferInfo, 10, messageBufferPosY + 30, 20, GREEN);
     }
-    Widget::Draw("ClearButton");
+    Widget::DrawGroup("BaseButtons");
 }
-
-void Engine::DrawMenuGUI(){
-    Widget::DrawGroup("MenuButtons");
-};
 
 void Engine::DrawNode(INode& node) {
     const auto NodeScreenPos{node.GetScreenPosition(instance->sandboxData->Camera)};
@@ -523,6 +533,10 @@ void Engine::DrawNode(INode& node) {
             16,
             YELLOW);
         nodeData.DeliveredMessageTimer = std::max(0.0f, nodeData.DeliveredMessageTimer - instance->env->DeltaTime);
+    }
+    if (sandboxData->ShowDebug){
+        DrawText(std::format("ID: {}", id).c_str(), NodeScreenPos[0] * zoom - 30, NodeScreenPos[1] * zoom + 25, 16, WHITE);
+        DrawText(std::format("Addr: {}", nodeData.Address.ToString()).c_str(), NodeScreenPos[0] * zoom - 30, NodeScreenPos[1] * zoom + 45, 16, WHITE);
     }
 }
 
@@ -556,7 +570,7 @@ void Engine::DrawEdge(Edge& edge) {
         DrawLineEx(fromScreen, toScreen, std::abs(i), color);
     }
 
-    if (sandboxData->ShowSpeed){
+    if (sandboxData->ShowDebug){
     const Vector2 midPoint{(fromScreen.x + toScreen.x) / 2, (fromScreen.y + toScreen.y) / 2};
     DrawText(std::format("{:.1f} Mbps", linkSpeedMbps).c_str(), midPoint.x + 5, midPoint.y + 5, 20, WHITE);
     }
@@ -613,4 +627,9 @@ std::optional<SelectedNodes> Engine::ConsumeMessageSelection() {
 void Engine::FlashEdgeBetween(uint16_t nodeA, uint16_t nodeB, float durationSeconds) {
     if (!instance) return;
     instance->nodes.FlashEdgeBetween(nodeA, nodeB, durationSeconds);
+}
+
+void Engine::ClearSelectedNode(){
+    if (!instance) return;
+    instance->nodes.ClearSelectedNodes();
 }

@@ -51,11 +51,12 @@ int main(int argc, char *argv[]) {
         .Text = "Send Message",
         .OnClick = [&sandboxData](){
             sandboxData.Edit.SelectedMode = "SEND_MESSAGE";
+            Engine::ClearSelectedNode();
             std::cout << "Message mode enabled. Click source router, then destination router.\n";
         }
     };
     Widget::Register("SendMessageButton", std::make_unique<Button>(sendWidgetData, sendButtonData));
-    Widget::AddToGroup("EditButtons", "SendMessageButton");
+    Widget::AddToGroup("BaseButtons", "SendMessageButton");
 
     struct InFlightMessage {
         std::vector<uint16_t> path;
